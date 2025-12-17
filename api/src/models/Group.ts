@@ -1,0 +1,52 @@
+import mongoose, { Schema, Document, Types } from 'mongoose';
+
+export interface IGroup extends Document {
+  name: string;
+  description?: string;
+  createdByUserId: Types.ObjectId;
+  memberIds: Types.ObjectId[];
+  createdAt: Date;
+}
+
+const GroupSchema = new Schema<IGroup>(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    createdByUserId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    memberIds: {
+      type: [Schema.Types.ObjectId],
+      ref: 'User',
+      required: true,
+      default: [],
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: false,
+  }
+);
+
+// Ensure creator is in memberIds
+GroupSchema.pre('save', function (next) {
+  if (this.isNew && !this.memberIds.includes(this.createdByUserId)) {
+    this.memberIds.push(this.createdByUserId);
+  }
+  next();
+});
+
+export const Group = mongoose.model<IGroup>('Group', GroupSchema);
+

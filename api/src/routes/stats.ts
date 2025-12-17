@@ -1,6 +1,7 @@
 import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { Game } from '../models/Game';
+import { Group } from '../models/Group';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -8,7 +9,42 @@ const router = express.Router();
 // Get cumulative totals per user
 router.get('/totals', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const games = await Game.find({}).populate('transactions.userId', 'username displayName');
+    const { groupId } = req.query;
+
+    // Get all groups user belongs to
+    const userGroups = await Group.find({
+      memberIds: req.userId,
+    }).select('_id');
+
+    const groupIds = userGroups.map((g) => g._id);
+
+    let query: any = { groupId: { $in: groupIds } };
+
+    // If groupId is provided, filter by that group (and verify membership)
+    if (groupId) {
+      if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
+        res.status(400).json({ error: 'Invalid group ID' });
+        return;
+      }
+
+      const group = await Group.findById(groupId);
+      if (!group) {
+        res.status(404).json({ error: 'Group not found' });
+        return;
+      }
+
+      const isMember = group.memberIds.some(
+        (memberId) => memberId.toString() === req.userId
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
+        return;
+      }
+
+      query = { groupId: new mongoose.Types.ObjectId(groupId as string) };
+    }
+
+    const games = await Game.find(query).populate('transactions.userId', 'username displayName');
 
     // Calculate totals per user
     const userTotals: Record<
@@ -48,17 +84,53 @@ router.get('/totals', authenticate, async (req: AuthRequest, res: Response) => {
 router.get('/user/:userId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
+    const { groupId } = req.query;
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       res.status(400).json({ error: 'Invalid user ID' });
       return;
     }
 
-    const games = await Game.find({
+    // Get all groups user belongs to
+    const userGroups = await Group.find({
+      memberIds: req.userId,
+    }).select('_id');
+
+    const groupIds = userGroups.map((g) => g._id);
+
+    let query: any = {
       'transactions.userId': userId,
-    })
+      groupId: { $in: groupIds },
+    };
+
+    // If groupId is provided, filter by that group (and verify membership)
+    if (groupId) {
+      if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
+        res.status(400).json({ error: 'Invalid group ID' });
+        return;
+      }
+
+      const group = await Group.findById(groupId);
+      if (!group) {
+        res.status(404).json({ error: 'Group not found' });
+        return;
+      }
+
+      const isMember = group.memberIds.some(
+        (memberId) => memberId.toString() === req.userId
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
+        return;
+      }
+
+      query.groupId = new mongoose.Types.ObjectId(groupId as string);
+    }
+
+    const games = await Game.find(query)
       .populate('transactions.userId', 'username displayName')
       .populate('createdByUserId', 'username displayName')
+      .populate('groupId', 'name')
       .sort({ date: -1, createdAt: -1 });
 
     // Calculate user's amount for each game

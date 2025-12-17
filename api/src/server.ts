@@ -7,6 +7,7 @@ import userRoutes from './routes/users';
 import gameRoutes from './routes/games';
 import transactionRoutes from './routes/transactions';
 import statsRoutes from './routes/stats';
+import groupRoutes from './routes/groups';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ connectDB();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/groups', groupRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api', transactionRoutes);
 app.use('/api/stats', statsRoutes);

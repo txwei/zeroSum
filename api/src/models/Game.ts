@@ -10,6 +10,7 @@ export interface IGame extends Document {
   name: string;
   date: Date;
   createdByUserId: Types.ObjectId;
+  groupId: Types.ObjectId;
   transactions: ITransaction[];
   createdAt: Date;
 }
@@ -47,6 +48,11 @@ const GameSchema = new Schema<IGame>(
     createdByUserId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
+      required: true,
+    },
+    groupId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Group',
       required: true,
     },
     transactions: {

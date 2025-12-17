@@ -1,6 +1,7 @@
 import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { Game } from '../models/Game';
+import { Group } from '../models/Group';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -8,10 +9,35 @@ const router = express.Router();
 // Create game
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, date, transactions } = req.body;
+    const { name, date, transactions, groupId } = req.body;
 
     if (!name || !date) {
       res.status(400).json({ error: 'Name and date are required' });
+      return;
+    }
+
+    if (!groupId) {
+      res.status(400).json({ error: 'Group ID is required' });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      res.status(400).json({ error: 'Invalid group ID' });
+      return;
+    }
+
+    // Verify group exists and user is a member
+    const group = await Group.findById(groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    const isMember = group.memberIds.some(
+      (memberId) => memberId.toString() === req.userId
+    );
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
 
@@ -31,6 +57,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       name: name.trim(),
       date: new Date(date),
       createdByUserId: req.userId,
+      groupId: new mongoose.Types.ObjectId(groupId),
       transactions: transactions || [],
     });
 
@@ -48,9 +75,45 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 // List games
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const games = await Game.find({})
+    const { groupId } = req.query;
+
+    // Get all groups user belongs to
+    const userGroups = await Group.find({
+      memberIds: req.userId,
+    }).select('_id');
+
+    const groupIds = userGroups.map((g) => g._id);
+
+    let query: any = { groupId: { $in: groupIds } };
+
+    // If groupId is provided, filter by that group (and verify membership)
+    if (groupId) {
+      if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
+        res.status(400).json({ error: 'Invalid group ID' });
+        return;
+      }
+
+      const group = await Group.findById(groupId);
+      if (!group) {
+        res.status(404).json({ error: 'Group not found' });
+        return;
+      }
+
+      const isMember = group.memberIds.some(
+        (memberId) => memberId.toString() === req.userId
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
+        return;
+      }
+
+      query = { groupId: new mongoose.Types.ObjectId(groupId as string) };
+    }
+
+    const games = await Game.find(query)
       .populate('transactions.userId', 'username displayName')
       .populate('createdByUserId', 'username displayName')
+      .populate('groupId', 'name')
       .sort({ date: -1, createdAt: -1 });
 
     res.json(games);
@@ -70,10 +133,26 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
     const game = await Game.findById(req.params.id)
       .populate('transactions.userId', 'username displayName')
-      .populate('createdByUserId', 'username displayName');
+      .populate('createdByUserId', 'username displayName')
+      .populate('groupId', 'name');
 
     if (!game) {
       res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Verify user is a member of the group
+    const group = await Group.findById(game.groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    const isMember = group.memberIds.some(
+      (memberId) => memberId.toString() === req.userId
+    );
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
 
@@ -96,6 +175,21 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 
     if (!game) {
       res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Verify user is a member of the group
+    const group = await Group.findById(game.groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    const isMember = group.memberIds.some(
+      (memberId) => memberId.toString() === req.userId
+    );
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
 

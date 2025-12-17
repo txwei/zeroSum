@@ -1,6 +1,7 @@
 import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { Game } from '../models/Game';
+import { Group } from '../models/Group';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -34,6 +35,21 @@ router.post('/games/:gameId/transactions', authenticate, async (req: AuthRequest
     const game = await Game.findById(gameId);
     if (!game) {
       res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Verify user is a member of the group
+    const group = await Group.findById(game.groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    const isMember = group.memberIds.some(
+      (memberId) => memberId.toString() === req.userId
+    );
+    if (!isMember) {
+      res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
 
@@ -77,6 +93,21 @@ router.put(
       const game = await Game.findById(gameId);
       if (!game) {
         res.status(404).json({ error: 'Game not found' });
+        return;
+      }
+
+      // Verify user is a member of the group
+      const group = await Group.findById(game.groupId);
+      if (!group) {
+        res.status(404).json({ error: 'Group not found' });
+        return;
+      }
+
+      const isMember = group.memberIds.some(
+        (memberId) => memberId.toString() === req.userId
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
         return;
       }
 
@@ -127,6 +158,21 @@ router.delete(
       const game = await Game.findById(gameId);
       if (!game) {
         res.status(404).json({ error: 'Game not found' });
+        return;
+      }
+
+      // Verify user is a member of the group
+      const group = await Group.findById(game.groupId);
+      if (!group) {
+        res.status(404).json({ error: 'Group not found' });
+        return;
+      }
+
+      const isMember = group.memberIds.some(
+        (memberId) => memberId.toString() === req.userId
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
         return;
       }
 

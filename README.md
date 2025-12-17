@@ -94,14 +94,37 @@ npm run dev
 You should see:
 - `Local: http://localhost:3000`
 
-### Step 4: Open the Application
+### Step 4: Create User Accounts
+
+You can create accounts in two ways:
+
+**Option A: Pre-create accounts for your friends (Recommended)**
+
+Use the admin script to create user accounts:
+
+```bash
+cd api
+npm run create-user <username> "<displayName>" <password>
+```
+
+Example:
+```bash
+npm run create-user alice "Alice Smith" password123
+npm run create-user bob "Bob Johnson" mypass456
+```
+
+**Option B: Use the registration page**
+
+Friends can create their own accounts by visiting the signup page at `http://localhost:3000/signup`.
+
+### Step 5: Open the Application
 
 Open your browser and navigate to:
 ```
 http://localhost:3000
 ```
 
-You should see the login page. Create an account to get started!
+You should see the login page. Log in with the credentials you created!
 
 ### Troubleshooting
 

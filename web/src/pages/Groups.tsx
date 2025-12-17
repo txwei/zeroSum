@@ -61,12 +61,7 @@ const Groups = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  useEffect(() => {
-    if (!loading && groups.length === 1 && !showCreateForm) {
-      // Auto-redirect to the only group's page
-      navigate(`/groups/${groups[0]._id}`);
-    }
-  }, [loading, groups, navigate, showCreateForm]);
+  // Removed auto-redirect - let users choose which group to view
 
   if (loading) {
     return (

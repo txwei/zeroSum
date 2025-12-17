@@ -146,9 +146,12 @@ const GroupDetails = () => {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
-        <Link to="/groups" className="text-blue-600 hover:text-blue-500">
+        <button
+          onClick={() => navigate('/groups')}
+          className="text-blue-600 hover:text-blue-500"
+        >
           ← Back to Groups
-        </Link>
+        </button>
       </div>
     );
   }
@@ -165,9 +168,12 @@ const GroupDetails = () => {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <Link to="/groups" className="text-blue-600 hover:text-blue-500 text-sm">
+            <button
+              onClick={() => navigate('/groups')}
+              className="text-blue-600 hover:text-blue-500 text-sm"
+            >
               ← Back to Groups
-            </Link>
+            </button>
             <div className="h-6 w-px bg-gray-300"></div>
             <div>
               {editingName && isAdmin ? (

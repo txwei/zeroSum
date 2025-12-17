@@ -23,51 +23,91 @@ A web application for tracking earnings and losses in home games (poker, mahjong
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- MongoDB (local installation or MongoDB Atlas account)
+- MongoDB connection string (from MongoDB Atlas or local MongoDB instance)
 - npm or yarn
 
-### API Setup
+### Step 1: Configure Environment Variables
 
-1. Navigate to the api directory:
+**Important**: All sensitive credentials are stored in a `.env` file in the `api/` directory. This file is not committed to git for security.
+
+1. Navigate to the `api` directory:
    ```bash
    cd api
    ```
 
-2. Install dependencies:
+2. Create a `.env` file in the `api/` directory (this file should not exist yet):
    ```bash
-   npm install
+   touch .env
    ```
 
-3. Create a `.env` file in the api directory:
+3. Open the `.env` file and add the following configuration:
    ```
    PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/zerosum
-   JWT_SECRET=your-secret-key-here
+   MONGODB_URI=your-mongodb-connection-string-here
+   JWT_SECRET=your-secret-key-here-change-in-production
    ```
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+4. **Replace the values:**
+   - `MONGODB_URI`: Paste your MongoDB connection string here. Examples:
+     - Local MongoDB: `mongodb://localhost:27017/zerosum`
+     - MongoDB Atlas: `mongodb+srv://username:password@cluster.mongodb.net/zerosum?retryWrites=true&w=majority`
+   - `JWT_SECRET`: Use a long, random string for production (e.g., generate with `openssl rand -base64 32`)
 
-### Web Setup
+**Security Note**: Never commit the `.env` file to git. It's already included in `.gitignore`.
 
-1. Navigate to the web directory:
-   ```bash
-   cd web
-   ```
+### Step 2: Install Dependencies
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+**API Dependencies:**
+```bash
+cd api
+npm install
+```
 
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+**Web Dependencies:**
+```bash
+cd web
+npm install
+```
 
-4. Open your browser and navigate to `http://localhost:3000`
+### Step 3: Start the Application
+
+You need to run both the API server and the web application. Use two separate terminal windows/tabs.
+
+**Terminal 1 - Start the API Server:**
+```bash
+cd api
+npm run dev
+```
+
+You should see:
+- `Server is running on port 5000`
+- `MongoDB connected successfully`
+
+If you see a MongoDB connection error, verify your `MONGODB_URI` in the `.env` file is correct.
+
+**Terminal 2 - Start the Web Application:**
+```bash
+cd web
+npm run dev
+```
+
+You should see:
+- `Local: http://localhost:3000`
+
+### Step 4: Open the Application
+
+Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+You should see the login page. Create an account to get started!
+
+### Troubleshooting
+
+- **MongoDB connection error**: Check that your `MONGODB_URI` in `api/.env` is correct and that MongoDB is running (if using local MongoDB)
+- **Port already in use**: If port 5000 or 3000 is already in use, you can change `PORT=5000` in `api/.env` (and update the proxy in `web/vite.config.ts` if needed)
+- **Module not found errors**: Make sure you've run `npm install` in both `api/` and `web/` directories
 
 ## Project Structure
 

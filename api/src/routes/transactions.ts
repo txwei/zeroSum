@@ -110,7 +110,7 @@ router.put(
         return;
       }
 
-      const transaction = game.transactions.id(transactionId);
+      const transaction = (game.transactions as any).id(transactionId);
       if (!transaction) {
         res.status(404).json({ error: 'Transaction not found' });
         return;
@@ -173,7 +173,7 @@ router.delete(
         return;
       }
 
-      const transaction = game.transactions.id(transactionId);
+      const transaction = (game.transactions as any).id(transactionId);
       if (!transaction) {
         res.status(404).json({ error: 'Transaction not found' });
         return;

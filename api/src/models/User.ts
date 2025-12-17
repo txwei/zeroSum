@@ -33,8 +33,12 @@ const UserSchema = new Schema<IUser>(
   {
     toJSON: {
       transform: (doc, ret) => {
-        delete ret.passwordHash;
-        return ret;
+        // Remove sensitive fields and transform _id to id
+        const { passwordHash, _id, __v, ...userWithoutPassword } = ret as any;
+        return {
+          ...userWithoutPassword,
+          id: _id,
+        };
       },
     },
   }

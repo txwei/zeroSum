@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import CreateGame from './CreateGame';
+import GameDetails from './GameDetails';
 
 interface Game {
   _id: string;
@@ -10,6 +13,10 @@ interface Game {
     _id: string;
     username: string;
     displayName: string;
+  };
+  groupId: {
+    _id: string;
+    name: string;
   };
   transactions: Array<{
     userId: {
@@ -21,19 +28,48 @@ interface Game {
   }>;
 }
 
-const Dashboard = () => {
+interface DashboardProps {
+  groupId: string;
+}
+
+const Dashboard = ({ groupId }: DashboardProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
+  const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filterMyGames, setFilterMyGames] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (groupId) {
+      fetchGames();
+    }
+  }, [groupId]);
+
+  const handleGameCreated = () => {
+    setShowCreateForm(false);
     fetchGames();
-  }, []);
+  };
+
+  useEffect(() => {
+    if (filterMyGames && user) {
+      const myGames = games.filter((game) =>
+        game.transactions.some((t) => t.userId._id.toString() === user.id)
+      );
+      setFilteredGames(myGames);
+    } else {
+      setFilteredGames(games);
+    }
+  }, [filterMyGames, games, user]);
 
   const fetchGames = async () => {
     try {
-      const response = await apiClient.get('/games');
-      setGames(response.data.slice(0, 10)); // Show recent 10 games
+      const response = await apiClient.get('/games', { params: { groupId } });
+      setGames(response.data);
+      setFilteredGames(response.data);
       setLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load games');
@@ -61,16 +97,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="px-4 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <Link
-          to="/create-game"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          Create New Game
-        </Link>
-      </div>
+    <div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -78,27 +105,31 @@ const Dashboard = () => {
         </div>
       )}
 
-      {games.length === 0 ? (
+      {filteredGames.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-6 text-center">
-          <p className="text-gray-600 mb-4">No games yet. Create your first game!</p>
-          <Link
-            to="/create-game"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Create Game
-          </Link>
+          <p className="text-gray-600 mb-4">
+            {filterMyGames ? "You haven't participated in any games yet." : 'No games yet. Create your first game!'}
+          </p>
+          {!filterMyGames && (
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
+              Create Game
+            </button>
+          )}
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="bg-white shadow rounded-lg overflow-hidden">
           <ul className="divide-y divide-gray-200">
-            {games.map((game) => {
+            {filteredGames.map((game) => {
               const sum = game.transactions.reduce((acc, t) => acc + t.amount, 0);
               return (
                 <li key={game._id}>
-                  <Link
-                    to={`/games/${game._id}`}
-                    className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
-                  >
+                      <button
+                        onClick={() => setSelectedGameId(game._id)}
+                        className="w-full text-left block hover:bg-gray-50 px-4 py-4 sm:px-6"
+                      >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center">
@@ -140,11 +171,61 @@ const Dashboard = () => {
                         </svg>
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 </li>
               );
             })}
           </ul>
+        </div>
+      )}
+
+      {/* Create Game Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Create New Game</h2>
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <CreateGame groupId={groupId} onClose={handleGameCreated} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Game Details Modal */}
+      {selectedGameId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Game Details</h2>
+                <button
+                  onClick={() => {
+                    setSelectedGameId(null);
+                    fetchGames();
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <GameDetails
+                gameId={selectedGameId}
+                groupId={groupId}
+                onClose={() => {
+                  setSelectedGameId(null);
+                  fetchGames();
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

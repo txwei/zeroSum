@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../api/client';
 
+interface StatsProps {
+  groupId: string;
+}
+
 interface UserTotal {
   userId: string;
   username: string;
@@ -8,19 +12,21 @@ interface UserTotal {
   total: number;
 }
 
-const Stats = () => {
+const Stats = ({ groupId }: StatsProps) => {
   const [totals, setTotals] = useState<UserTotal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'total'>('total');
 
   useEffect(() => {
-    fetchTotals();
-  }, []);
+    if (groupId) {
+      fetchTotals();
+    }
+  }, [groupId]);
 
   const fetchTotals = async () => {
     try {
-      const response = await apiClient.get('/stats/totals');
+      const response = await apiClient.get('/stats/totals', { params: { groupId } });
       setTotals(response.data);
       setLoading(false);
     } catch (err: any) {
@@ -64,7 +70,9 @@ const Stats = () => {
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-medium text-gray-900">Cumulative Totals</h2>
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Cumulative Totals</h2>
+            </div>
             <div className="flex space-x-2">
               <button
                 onClick={() => setSortBy('name')}

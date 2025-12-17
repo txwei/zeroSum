@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+
+interface GameDetailsProps {
+  gameId: string;
+  groupId: string;
+  onClose: () => void;
+}
 
 interface Game {
   _id: string;
@@ -10,6 +16,10 @@ interface Game {
     _id: string;
     username: string;
     displayName: string;
+  };
+  groupId: {
+    _id: string;
+    name: string;
   };
   transactions: Array<{
     _id: string;
@@ -22,22 +32,21 @@ interface Game {
   }>;
 }
 
-const GameDetails = () => {
-  const { id } = useParams<{ id: string }>();
+const GameDetails = ({ gameId, groupId, onClose }: GameDetailsProps) => {
   const navigate = useNavigate();
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (id) {
+    if (gameId) {
       fetchGame();
     }
-  }, [id]);
+  }, [gameId]);
 
   const fetchGame = async () => {
     try {
-      const response = await apiClient.get(`/games/${id}`);
+      const response = await apiClient.get(`/games/${gameId}`);
       setGame(response.data);
       setLoading(false);
     } catch (err: any) {
@@ -52,8 +61,9 @@ const GameDetails = () => {
     }
 
     try {
-      await apiClient.delete(`/games/${id}`);
-      navigate('/');
+      await apiClient.delete(`/games/${gameId}`);
+      onClose();
+      // Refresh will be handled by parent
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to delete game');
     }
@@ -101,9 +111,9 @@ const GameDetails = () => {
   return (
     <div className="px-4 sm:px-0">
       <div className="mb-4">
-        <Link to="/" className="text-blue-600 hover:text-blue-500 text-sm">
-          ← Back to Dashboard
-        </Link>
+        <button onClick={onClose} className="text-blue-600 hover:text-blue-500 text-sm">
+          ← Back to Games
+        </button>
       </div>
 
       {error && (
@@ -118,9 +128,19 @@ const GameDetails = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{game.name}</h1>
               <p className="text-sm text-gray-500 mt-1">{formatDate(game.date)}</p>
-              <p className="text-sm text-gray-500">
-                Created by {game.createdByUserId.displayName}
-              </p>
+              <div className="flex items-center space-x-2 mt-1">
+                <p className="text-sm text-gray-500">
+                  Created by {game.createdByUserId.displayName}
+                </p>
+                {game.groupId && (
+                  <>
+                    <span className="text-gray-400">•</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                      {game.groupId.name}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
             <button
               onClick={handleDelete}

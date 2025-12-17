@@ -2,6 +2,7 @@ import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { Group } from '../models/Group';
 import { User } from '../models/User';
+import { isGroupMember } from '../middleware/groupAuth';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -38,7 +39,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const groups = await Group.find({
-      memberIds: req.userId,
+      memberIds: new mongoose.Types.ObjectId(req.userId),
     })
       .populate('createdByUserId', 'username displayName')
       .populate('memberIds', 'username displayName')
@@ -51,6 +52,52 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Update group name
+router.patch('/:id', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: 'Invalid group ID' });
+      return;
+    }
+
+    const group = await Group.findById(id);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    // Check if user is admin
+    if (group.createdByUserId.toString() !== req.userId) {
+      res.status(403).json({ error: 'Only admin can update the group' });
+      return;
+    }
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        res.status(400).json({ error: 'Group name cannot be empty' });
+        return;
+      }
+      group.name = name.trim();
+    }
+
+    if (description !== undefined) {
+      group.description = description?.trim();
+    }
+
+    await group.save();
+    await group.populate('createdByUserId', 'username displayName');
+    await group.populate('memberIds', 'username displayName');
+
+    res.json(group);
+  } catch (error) {
+    console.error('Update group error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get group details
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
@@ -59,23 +106,23 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const group = await Group.findById(req.params.id)
-      .populate('createdByUserId', 'username displayName')
-      .populate('memberIds', 'username displayName');
+    const group = await Group.findById(req.params.id);
 
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
       return;
     }
 
-    // Check if user is a member
-    const isMember = group.memberIds.some(
-      (memberId) => memberId.toString() === req.userId
-    );
-    if (!isMember) {
+    // Check if user is a member (before populating, so memberIds are ObjectIds)
+    const userId = req.userId?.toString() || '';
+    if (!isGroupMember(group, userId)) {
       res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
+
+    // Populate after checking membership
+    await group.populate('createdByUserId', 'username displayName');
+    await group.populate('memberIds', 'username displayName');
 
     res.json(group);
   } catch (error) {
@@ -107,10 +154,8 @@ router.post('/:id/members', authenticate, async (req: AuthRequest, res: Response
     }
 
     // Check if user is a member
-    const isMember = group.memberIds.some(
-      (memberId) => memberId.toString() === req.userId
-    );
-    if (!isMember) {
+    const userId = req.userId?.toString() || '';
+    if (!isGroupMember(group, userId)) {
       res.status(403).json({ error: 'Not a member of this group' });
       return;
     }

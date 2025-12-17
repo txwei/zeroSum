@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 import { connectDB } from '../src/db/mongoose';
 import { Game } from '../src/models/Game';
 import { Group } from '../src/models/Group';
@@ -47,11 +48,22 @@ const migrateGamesToGroups = async () => {
         defaultGroup = new Group({
           name: `${creator.displayName}'s Games`,
           description: 'Default group for existing games',
-          createdByUserId: creatorId,
-          memberIds: [creatorId],
+          createdByUserId: new mongoose.Types.ObjectId(creatorId),
+          memberIds: [new mongoose.Types.ObjectId(creatorId)],
         });
         await defaultGroup.save();
         console.log(`Created default group for ${creator.displayName}`);
+      } else {
+        // Ensure creator is in memberIds
+        const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
+        const isMember = defaultGroup.memberIds.some(
+          (memberId) => memberId.toString() === creatorId
+        );
+        if (!isMember) {
+          defaultGroup.memberIds.push(creatorObjectId);
+          await defaultGroup.save();
+          console.log(`Added creator to existing group: ${creator.displayName}'s Games`);
+        }
       }
 
       groupMap.set(creatorId, defaultGroup._id.toString());

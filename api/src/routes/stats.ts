@@ -2,6 +2,7 @@ import express, { Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { Game } from '../models/Game';
 import { Group } from '../models/Group';
+import { isGroupMember } from '../middleware/groupAuth';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -33,10 +34,8 @@ router.get('/totals', authenticate, async (req: AuthRequest, res: Response) => {
         return;
       }
 
-      const isMember = group.memberIds.some(
-        (memberId) => memberId.toString() === req.userId
-      );
-      if (!isMember) {
+      const userId = req.userId?.toString() || '';
+      if (!isGroupMember(group, userId)) {
         res.status(403).json({ error: 'Not a member of this group' });
         return;
       }
@@ -116,10 +115,8 @@ router.get('/user/:userId', authenticate, async (req: AuthRequest, res: Response
         return;
       }
 
-      const isMember = group.memberIds.some(
-        (memberId) => memberId.toString() === req.userId
-      );
-      if (!isMember) {
+      const userId = req.userId?.toString() || '';
+      if (!isGroupMember(group, userId)) {
         res.status(403).json({ error: 'Not a member of this group' });
         return;
       }

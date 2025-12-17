@@ -42,7 +42,11 @@ const GroupSchema = new Schema<IGroup>(
 
 // Ensure creator is in memberIds
 GroupSchema.pre('save', function (next) {
-  if (this.isNew && !this.memberIds.includes(this.createdByUserId)) {
+  const creatorId = this.createdByUserId.toString();
+  const isMember = this.memberIds.some(
+    (memberId) => memberId.toString() === creatorId
+  );
+  if (!isMember) {
     this.memberIds.push(this.createdByUserId);
   }
   next();

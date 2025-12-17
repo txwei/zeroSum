@@ -128,13 +128,13 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
               <p className="text-sm text-gray-500 mt-1">{formatDate(game.date)}</p>
               <div className="flex items-center space-x-2 mt-1">
               <p className="text-sm text-gray-500">
-                Created by {game.createdByUserId.displayName}
+                Created by {game.createdByUserId?.displayName || 'Unknown'}
               </p>
                 {game.groupId && (
                   <>
                     <span className="text-gray-400">•</span>
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                      {game.groupId.name}
+                      {game.groupId?.name || 'Unknown Group'}
                     </span>
                   </>
                 )}
@@ -180,7 +180,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
                   {game.transactions.map((transaction) => (
                     <tr key={transaction._id}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.userId.displayName}
+                        {transaction.userId?.displayName || 'Unknown User'}
                       </td>
                       <td
                         className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${

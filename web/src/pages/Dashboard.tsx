@@ -55,7 +55,10 @@ const Dashboard = ({ groupId }: DashboardProps) => {
   useEffect(() => {
     if (filterMyGames && user) {
       const myGames = games.filter((game) =>
-        game.transactions.some((t) => t.userId._id.toString() === user.id)
+        game.transactions.some((t) => {
+          const userId = t.userId?._id || t.userId;
+          return userId?.toString() === user.id;
+        })
       );
       setFilteredGames(myGames);
     } else {

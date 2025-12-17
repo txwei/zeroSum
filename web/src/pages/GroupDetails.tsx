@@ -160,7 +160,7 @@ const GroupDetails = () => {
     return null;
   }
 
-  const isAdmin = group.createdByUserId._id.toString() === user?.id;
+  const isAdmin = group.createdByUserId?._id?.toString() === user?.id;
 
   return (
     <div className="px-4 sm:px-0">

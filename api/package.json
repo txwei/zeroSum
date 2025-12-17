@@ -10,7 +10,6 @@
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "create-user": "tsx scripts/create-user.ts",
-    "migrate-games": "tsx scripts/migrate-games-to-groups.ts",
     "fix-membership": "tsx scripts/fix-group-membership.ts",
     "check-membership": "tsx scripts/check-group-membership.ts"
   },

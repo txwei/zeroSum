@@ -42,7 +42,7 @@ A web application for tracking earnings and losses in home games (poker, mahjong
 
 3. Open the `.env` file and add the following configuration:
    ```
-   PORT=5000
+   PORT=5001
    MONGODB_URI=your-mongodb-connection-string-here
    JWT_SECRET=your-secret-key-here-change-in-production
    ```
@@ -80,7 +80,7 @@ npm run dev
 ```
 
 You should see:
-- `Server is running on port 5000`
+- `Server is running on port 5001`
 - `MongoDB connected successfully`
 
 If you see a MongoDB connection error, verify your `MONGODB_URI` in the `.env` file is correct.
@@ -106,7 +106,7 @@ You should see the login page. Create an account to get started!
 ### Troubleshooting
 
 - **MongoDB connection error**: Check that your `MONGODB_URI` in `api/.env` is correct and that MongoDB is running (if using local MongoDB)
-- **Port already in use**: If port 5000 or 3000 is already in use, you can change `PORT=5000` in `api/.env` (and update the proxy in `web/vite.config.ts` if needed)
+- **Port already in use**: If port 5001 or 3000 is already in use, you can change `PORT=5001` in `api/.env` (and update the proxy in `web/vite.config.ts` to match)
 - **Module not found errors**: Make sure you've run `npm install` in both `api/` and `web/` directories
 
 ## Project Structure

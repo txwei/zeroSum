@@ -1,29 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useGroup } from '../context/GroupContext';
-import { useAuth } from '../context/AuthContext';
-
-interface Group {
-  _id: string;
-  name: string;
-  description?: string;
-  createdByUserId: {
-    _id: string;
-    username: string;
-    displayName: string;
-  };
-  memberIds: Array<{
-    _id: string;
-    username: string;
-    displayName: string;
-  }>;
-  createdAt: string;
-}
 
 const Groups = () => {
   const { groups, loading, refreshGroups } = useGroup();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [name, setName] = useState('');
@@ -159,7 +140,6 @@ const Groups = () => {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((group) => {
-            const isAdmin = group.createdByUserId._id === user?.id;
             return (
               <div
                 key={group._id}

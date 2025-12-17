@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import TransactionInput from '../components/TransactionInput';
 
@@ -26,7 +25,6 @@ const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 
 interface GameDetailsProps {
   gameId: string;
-  groupId: string;
+  groupId?: string;
   onClose: () => void;
 }
 
@@ -32,8 +31,7 @@ interface Game {
   }>;
 }
 
-const GameDetails = ({ gameId, groupId, onClose }: GameDetailsProps) => {
-  const navigate = useNavigate();
+const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -94,9 +92,9 @@ const GameDetails = ({ gameId, groupId, onClose }: GameDetailsProps) => {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
-        <Link to="/" className="text-blue-600 hover:text-blue-500">
-          ← Back to Dashboard
-        </Link>
+        <button onClick={onClose} className="text-blue-600 hover:text-blue-500">
+          ← Back
+        </button>
       </div>
     );
   }

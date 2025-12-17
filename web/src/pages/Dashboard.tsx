@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import CreateGame from './CreateGame';
@@ -34,7 +33,6 @@ interface DashboardProps {
 
 const Dashboard = ({ groupId }: DashboardProps) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [games, setGames] = useState<Game[]>([]);
   const [filteredGames, setFilteredGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);

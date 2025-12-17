@@ -155,6 +155,70 @@ zeroSum/
 └── README.md
 ```
 
+## Deployment
+
+### Deploying to Railway (Backend) and Vercel (Frontend)
+
+#### Prerequisites
+- MongoDB Atlas account (free tier available)
+- Railway account (free tier with $5 credit/month)
+- Vercel account (free tier available)
+- GitHub repository with your code
+
+#### Step 1: Set Up MongoDB Atlas
+1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+2. Create a free cluster
+3. Create a database user
+4. Get your connection string (replace `<password>` with your password)
+5. Add IP whitelist: `0.0.0.0/0` (for development) or Railway's IP ranges
+
+#### Step 2: Deploy Backend to Railway
+1. Go to [Railway](https://railway.app) and sign up
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select your repository
+4. Click "Add Service" → "GitHub Repo"
+5. **Important**: In the service settings, set the **Root Directory** to `api`
+6. Go to "Variables" tab and add:
+   - `MONGODB_URI`: Your MongoDB Atlas connection string
+   - `JWT_SECRET`: Generate with `openssl rand -base64 32`
+   - `FRONTEND_URL`: Will set this after Vercel deployment (e.g., `https://your-app.vercel.app`)
+7. Railway will automatically:
+   - Detect Node.js
+   - Run `npm install`
+   - Run `npm run build`
+   - Run `npm start`
+8. Copy your Railway URL (e.g., `https://your-api.up.railway.app`)
+
+#### Step 3: Deploy Frontend to Vercel
+1. Go to [Vercel](https://vercel.com) and sign up
+2. Click "Add New Project" → Import your GitHub repository
+3. **Important**: Set the **Root Directory** to `web`
+4. Configure build settings:
+   - Framework Preset: Vite
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+5. Add environment variable:
+   - `VITE_API_URL`: Your Railway backend URL + `/api` (e.g., `https://your-api.up.railway.app/api`)
+6. Click "Deploy"
+7. Copy your Vercel URL (e.g., `https://your-app.vercel.app`)
+
+#### Step 4: Update Backend CORS
+1. Go back to Railway
+2. Update the `FRONTEND_URL` environment variable with your Vercel URL
+3. Railway will automatically redeploy
+
+#### Step 5: Test Your Deployment
+- Frontend: Visit your Vercel URL
+- Backend health check: `https://your-api.up.railway.app/api/health`
+- Test login/signup functionality
+
+#### Troubleshooting
+- **Railway build fails**: Check that Root Directory is set to `api`
+- **Vercel build fails**: Check that Root Directory is set to `web`
+- **CORS errors**: Verify `FRONTEND_URL` in Railway matches your Vercel URL exactly
+- **API not reachable**: Check Railway logs and ensure the service is running
+- **Environment variables not working**: Make sure variables are set in the correct service (Railway for backend, Vercel for frontend)
+
 ## License
 
 ISC

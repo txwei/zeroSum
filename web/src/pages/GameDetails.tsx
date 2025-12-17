@@ -129,9 +129,9 @@ const GameDetails = ({ gameId, groupId, onClose }: GameDetailsProps) => {
               <h1 className="text-2xl font-bold text-gray-900">{game.name}</h1>
               <p className="text-sm text-gray-500 mt-1">{formatDate(game.date)}</p>
               <div className="flex items-center space-x-2 mt-1">
-                <p className="text-sm text-gray-500">
-                  Created by {game.createdByUserId.displayName}
-                </p>
+              <p className="text-sm text-gray-500">
+                Created by {game.createdByUserId.displayName}
+              </p>
                 {game.groupId && (
                   <>
                     <span className="text-gray-400">•</span>

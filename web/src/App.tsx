@@ -51,7 +51,7 @@ function App() {
     <Router>
       <AuthProvider>
         <GroupProvider>
-          <AppRoutes />
+        <AppRoutes />
         </GroupProvider>
       </AuthProvider>
     </Router>

@@ -98,6 +98,27 @@ const Dashboard = ({ groupId }: DashboardProps) => {
 
   return (
     <div>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-4">
+          <h2 className="text-xl font-semibold text-gray-900">Games</h2>
+          <button
+            onClick={() => setFilterMyGames(!filterMyGames)}
+            className={`px-3 py-1 rounded-md text-sm font-medium ${
+              filterMyGames
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {filterMyGames ? 'Show All' : 'My Games Only'}
+          </button>
+        </div>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+        >
+          Create New Game
+        </button>
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -113,9 +134,9 @@ const Dashboard = ({ groupId }: DashboardProps) => {
           {!filterMyGames && (
             <button
               onClick={() => setShowCreateForm(true)}
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Create Game
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Create Game
             </button>
           )}
         </div>
@@ -129,7 +150,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                       <button
                         onClick={() => setSelectedGameId(game._id)}
                         className="w-full text-left block hover:bg-gray-50 px-4 py-4 sm:px-6"
-                      >
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center">

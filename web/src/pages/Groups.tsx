@@ -48,8 +48,8 @@ const Groups = () => {
       setDescription('');
       setShowCreateForm(false);
       await refreshGroups();
-      // Navigate to the new group's games page
-      navigate(`/groups/${response.data._id}/games`);
+      // Navigate to the new group's page
+      navigate(`/groups/${response.data._id}`);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create group');
     } finally {

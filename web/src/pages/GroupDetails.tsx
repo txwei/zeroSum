@@ -31,7 +31,7 @@ const GroupDetails = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { refreshGroups } = useGroup();
+  const { refreshGroups, fetchGroupDetails, groupDetailsCache } = useGroup();
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,11 +53,31 @@ const GroupDetails = () => {
   }, [groupId]);
 
   const fetchGroup = async () => {
+    setLoading(true);
+    setError('');
+    
+    // Check cache first - show immediately if available
+    const cached = groupDetailsCache.get(groupId!);
+    if (cached) {
+      setGroup(cached);
+      setGroupName(cached.name);
+      setGroupDescription(cached.description || '');
+      setLoading(false);
+      // Fetch fresh data in background (non-blocking)
+      fetchGroupDetails(groupId!).catch(() => {
+        // Silently fail background refresh
+      });
+      return;
+    }
+
+    // Not in cache - fetch normally
     try {
-      const response = await apiClient.get(`/groups/${groupId}`);
-      setGroup(response.data);
-      setGroupName(response.data.name);
-      setGroupDescription(response.data.description || '');
+      const groupDetails = await fetchGroupDetails(groupId!);
+      if (groupDetails) {
+        setGroup(groupDetails);
+        setGroupName(groupDetails.name);
+        setGroupDescription(groupDetails.description || '');
+      }
       setLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load group');
@@ -426,7 +446,9 @@ const GroupDetails = () => {
       )}
 
       {/* Tab Content */}
-      {activeTab === 'games' && groupId && <Dashboard groupId={groupId} />}
+      {activeTab === 'games' && groupId && (
+        <Dashboard key={groupId} groupId={groupId} />
+      )}
       {activeTab === 'stats' && groupId && <Stats groupId={groupId} />}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import apiClient from '../api/client';
+import { gameDetailsCache } from './Dashboard';
 
 interface GameDetailsProps {
   gameId: string;
@@ -21,7 +22,7 @@ interface Game {
     name: string;
   };
   transactions: Array<{
-    _id: string;
+    _id?: string; // Optional because Dashboard Game doesn't have it
     userId: {
       _id: string;
       username: string;
@@ -43,9 +44,21 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
   }, [gameId]);
 
   const fetchGame = async () => {
+    // Check cache first - show immediately if available
+    const cached = gameDetailsCache.get(gameId);
+    if (cached) {
+      setGame(cached);
+      setLoading(false);
+      // Still fetch fresh data in background
+    } else {
+      setLoading(true);
+    }
+
     try {
       const response = await apiClient.get(`/games/${gameId}`);
-      setGame(response.data);
+      const gameData = response.data;
+      gameDetailsCache.set(gameId, gameData);
+      setGame(gameData);
       setLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load game');

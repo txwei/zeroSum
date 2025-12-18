@@ -3,6 +3,7 @@ import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import CreateGame from './CreateGame';
 import GameDetails from './GameDetails';
+import { GameCardSkeleton, SkeletonLoader } from '../components/SkeletonLoader';
 
 interface Game {
   _id: string;
@@ -31,6 +32,12 @@ interface DashboardProps {
   groupId: string;
 }
 
+// Cache for game details (shared between Dashboard and GameDetails)
+export const gameDetailsCache = new Map<string, Game>();
+
+// Cache for game lists by groupId
+const gameListCache = new Map<string, Game[]>();
+
 const Dashboard = ({ groupId }: DashboardProps) => {
   const { user } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
@@ -41,14 +48,64 @@ const Dashboard = ({ groupId }: DashboardProps) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
+  // Prefetch game details on hover (with debounce to avoid too many requests)
+  const prefetchGame = (() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    return (gameId: string) => {
+      // Debounce: only prefetch after 200ms of hover
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        if (gameDetailsCache.has(gameId)) {
+          return; // Already cached
+        }
+        apiClient.get(`/games/${gameId}`)
+          .then(response => {
+            gameDetailsCache.set(gameId, response.data);
+          })
+          .catch(() => {
+            // Silently fail for prefetch
+          });
+      }, 200); // Wait 200ms before prefetching
+    };
+  })();
+
   useEffect(() => {
     if (groupId) {
       fetchGames();
     }
   }, [groupId]);
 
+  const fetchGames = async () => {
+    // Check cache first - show immediately if available
+    const cached = gameListCache.get(groupId);
+    if (cached) {
+      setGames(cached);
+      setFilteredGames(cached);
+      setLoading(false);
+      // Fetch fresh data in background
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const response = await apiClient.get('/games', { params: { groupId } });
+      const fetchedGames = response.data;
+      gameListCache.set(groupId, fetchedGames);
+      setGames(fetchedGames);
+      setFilteredGames(fetchedGames);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to load games');
+      setLoading(false);
+    }
+  };
+
   const handleGameCreated = () => {
     setShowCreateForm(false);
+    // Invalidate cache and refetch
+    gameListCache.delete(groupId);
     fetchGames();
   };
 
@@ -66,18 +123,6 @@ const Dashboard = ({ groupId }: DashboardProps) => {
     }
   }, [filterMyGames, games, user]);
 
-  const fetchGames = async () => {
-    try {
-      const response = await apiClient.get('/games', { params: { groupId } });
-      setGames(response.data);
-      setFilteredGames(response.data);
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load games');
-      setLoading(false);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -89,10 +134,21 @@ const Dashboard = ({ groupId }: DashboardProps) => {
     }).format(amount);
   };
 
-  if (loading) {
+  // Only show skeleton on initial load, not when we have cached games
+  if (loading && games.length === 0 && filteredGames.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-lg text-gray-600">Loading...</div>
+      <div className="px-4 sm:px-0">
+        <div className="mb-6 flex justify-between items-center">
+          <SkeletonLoader className="h-8 w-48" />
+          <SkeletonLoader className="h-10 w-32" />
+        </div>
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <ul className="divide-y divide-gray-200">
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+            <GameCardSkeleton />
+          </ul>
+        </div>
       </div>
     );
   }
@@ -150,7 +206,8 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                 <li key={game._id}>
                       <button
                         onClick={() => setSelectedGameId(game._id)}
-                        className="w-full text-left block hover:bg-gray-50 px-4 py-4 sm:px-6"
+                        onMouseEnter={() => prefetchGame(game._id)}
+                        className="w-full text-left block hover:bg-gray-50 px-4 py-4 sm:px-6 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">

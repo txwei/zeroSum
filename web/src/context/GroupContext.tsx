@@ -19,6 +19,10 @@ interface Group {
   createdAt: string;
 }
 
+interface GroupDetails extends Group {
+  // Extended group details with full member info
+}
+
 interface GroupContextType {
   groups: Group[];
   selectedGroupId: string | null;
@@ -27,6 +31,10 @@ interface GroupContextType {
   fetchGroups: () => Promise<void>;
   selectGroup: (groupId: string | null) => void;
   refreshGroups: () => Promise<void>;
+  // Cache for group details
+  groupDetailsCache: Map<string, GroupDetails>;
+  fetchGroupDetails: (groupId: string) => Promise<GroupDetails | null>;
+  prefetchGroupDetails: (groupId: string) => void;
 }
 
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
@@ -48,6 +56,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [groupDetailsCache, setGroupDetailsCache] = useState<Map<string, GroupDetails>>(new Map());
 
   const fetchGroups = async () => {
     try {
@@ -85,6 +94,42 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
     await fetchGroups();
   };
 
+  const fetchGroupDetails = async (groupId: string): Promise<GroupDetails | null> => {
+    // Check cache first
+    const cached = groupDetailsCache.get(groupId);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch if not cached
+    try {
+      const response = await apiClient.get(`/groups/${groupId}`);
+      const groupDetails = response.data as GroupDetails;
+      setGroupDetailsCache(prev => new Map(prev).set(groupId, groupDetails));
+      return groupDetails;
+    } catch (error) {
+      console.error('Failed to fetch group details:', error);
+      return null;
+    }
+  };
+
+  const prefetchGroupDetails = (groupId: string) => {
+    // Only prefetch if not already cached
+    const cached = groupDetailsCache.get(groupId);
+    if (cached) {
+      return; // Already have it, no need to prefetch
+    }
+
+    // Prefetch group details (non-blocking)
+    apiClient.get(`/groups/${groupId}`)
+      .then(response => {
+        setGroupDetailsCache(prev => new Map(prev).set(groupId, response.data));
+      })
+      .catch(() => {
+        // Silently fail for prefetch - it's just an optimization
+      });
+  };
+
   useEffect(() => {
     if (user) {
       fetchGroups();
@@ -105,6 +150,9 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
         fetchGroups,
         selectGroup,
         refreshGroups,
+        groupDetailsCache,
+        fetchGroupDetails,
+        prefetchGroupDetails,
       }}
     >
       {children}

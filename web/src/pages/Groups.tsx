@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useGroup } from '../context/GroupContext';
+import { GroupCardSkeleton } from '../components/SkeletonLoader';
 
 const Groups = () => {
-  const { groups, loading, refreshGroups } = useGroup();
+  const { groups, loading, refreshGroups, prefetchGroupDetails } = useGroup();
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [name, setName] = useState('');
@@ -139,7 +140,14 @@ const Groups = () => {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => {
+          {loading ? (
+            <>
+              <GroupCardSkeleton />
+              <GroupCardSkeleton />
+              <GroupCardSkeleton />
+            </>
+          ) : (
+            groups.map((group) => {
             return (
               <div
                 key={group._id}
@@ -158,14 +166,19 @@ const Groups = () => {
                   </div>
                   <button
                     onClick={() => navigate(`/groups/${group._id}`)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium ml-4"
+                    onMouseEnter={() => {
+                      // Only prefetch after a short delay to avoid unnecessary requests
+                      setTimeout(() => prefetchGroupDetails(group._id), 300);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium ml-4 transition-colors"
                   >
                     Open
                   </button>
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
       )}
     </div>

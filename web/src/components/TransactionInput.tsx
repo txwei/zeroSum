@@ -7,7 +7,7 @@ interface User {
 }
 
 interface Transaction {
-  userId: string;
+  userId: string | { _id?: string; id?: string };
   amount: number;
 }
 
@@ -25,13 +25,24 @@ const TransactionInput: React.FC<TransactionInputProps> = ({
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [amounts, setAmounts] = useState<Record<string, number>>({});
 
+  // Helper to extract userId string from either string or object
+  const getUserIdString = (userId: string | { _id?: string; id?: string }): string => {
+    if (typeof userId === 'string') {
+      return userId;
+    }
+    return userId?._id || userId?.id || '';
+  };
+
   useEffect(() => {
     // Initialize amounts from transactions (only on mount)
     if (transactions.length > 0) {
       const initialAmounts: Record<string, number> = {};
-      const initialSelectedUsers = transactions.map((t) => t.userId);
+      const initialSelectedUsers = transactions.map((t) => getUserIdString(t.userId)).filter(Boolean);
       transactions.forEach((t) => {
-        initialAmounts[t.userId] = t.amount;
+        const userId = getUserIdString(t.userId);
+        if (userId) {
+          initialAmounts[userId] = t.amount;
+        }
       });
       setAmounts(initialAmounts);
       setSelectedUsers(initialSelectedUsers);

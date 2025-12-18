@@ -11,12 +11,14 @@ interface Group {
   name: string;
   description?: string;
   createdByUserId: {
-    _id: string;
+    id?: string;  // User model transforms _id to id in toJSON
+    _id?: string;  // Fallback in case it's not transformed
     username: string;
     displayName: string;
   };
   memberIds: Array<{
-    _id: string;
+    id?: string;  // User model transforms _id to id in toJSON
+    _id?: string;  // Fallback in case it's not transformed
     username: string;
     displayName: string;
   }>;
@@ -160,7 +162,11 @@ const GroupDetails = () => {
     return null;
   }
 
-  const isAdmin = group.createdByUserId?._id?.toString() === user?.id;
+  // Normalize IDs for comparison - User model transforms _id to id in toJSON
+  const ownerId = group.createdByUserId?.id || group.createdByUserId?._id;
+  const ownerIdStr = ownerId ? String(ownerId) : '';
+  const currentUserIdStr = user?.id ? String(user.id) : '';
+  const isAdmin = ownerIdStr && currentUserIdStr && ownerIdStr === currentUserIdStr;
 
   return (
     <div className="px-4 sm:px-0">
@@ -245,14 +251,6 @@ const GroupDetails = () => {
             >
               {showManage ? 'Hide' : 'Manage'}
             </button>
-            {isAdmin && !editingName && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Delete Group
-              </button>
-            )}
           </div>
         </div>
 
@@ -298,62 +296,109 @@ const GroupDetails = () => {
             <p className="text-sm text-gray-600 mb-4">{group.description}</p>
           )}
 
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Add Member</h3>
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Add Member</h3>
             <form onSubmit={handleAddMember} className="flex space-x-2">
               <input
                 type="text"
                 value={usernameToAdd}
                 onChange={(e) => setUsernameToAdd(e.target.value)}
-                placeholder="Enter username"
-                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                placeholder="Enter username (e.g., alice)"
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
               />
               <button
                 type="submit"
-                disabled={addingMember}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+                disabled={addingMember || !usernameToAdd.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                {addingMember ? 'Adding...' : 'Add'}
+                {addingMember ? 'Adding...' : 'Add Member'}
               </button>
             </form>
+            <p className="text-xs text-gray-500 mt-2">
+              Enter the username of the person you want to add to this group
+            </p>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Members ({group.memberIds.length})</h3>
-            <div className="space-y-2">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Members</h3>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {group.memberIds.length} {group.memberIds.length === 1 ? 'member' : 'members'}
+              </span>
+            </div>
+            <div className="space-y-3">
               {group.memberIds.map((member) => {
-                const isMemberAdmin = member._id === group.createdByUserId._id;
-                const canRemove = isAdmin && !isMemberAdmin;
+                // Extract owner ID - User model's toJSON transforms _id to id
+                const ownerId = group.createdByUserId?.id || group.createdByUserId?._id;
+                const ownerIdStr = ownerId ? String(ownerId) : '';
+                
+                // Extract member ID - User model's toJSON transforms _id to id
+                const memberId = member?.id || member?._id;
+                const memberIdStr = memberId ? String(memberId) : '';
+                
+                // Only compare if both IDs exist and match exactly
+                const isMemberOwner = Boolean(
+                  ownerIdStr && 
+                  memberIdStr && 
+                  ownerIdStr === memberIdStr
+                );
 
                 return (
                   <div
-                    key={member._id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    key={member.id || member._id}
+                    className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium text-gray-900">{member.displayName}</span>
-                        {isMemberAdmin && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                            Owner
-                          </span>
-                        )}
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold text-sm">
+                          {member.displayName.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-                      <span className="text-sm text-gray-500">@{member.username}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-gray-900">{member.displayName}</span>
+                          {isMemberOwner && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              Owner
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm text-gray-500">@{member.username}</span>
+                      </div>
                     </div>
-                    {canRemove && (
-                      <button
-                        onClick={() => handleRemoveMember(member._id)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
-                      >
-                        Remove
-                      </button>
-                    )}
+                    <div className="ml-4 flex items-center">
+                      {isMemberOwner ? (
+                        <span className="text-xs text-gray-400 italic">Cannot remove owner</span>
+                      ) : isAdmin ? (
+                        <button
+                          onClick={() => handleRemoveMember(member.id || member._id || '')}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
+
+          {/* Delete Group Section - Only visible to admin */}
+          {isAdmin && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Danger Zone</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Once you delete a group, there is no going back. Please be certain.
+              </p>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-red-600 hover:text-red-800 text-sm font-medium underline"
+              >
+                Delete this group
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -12,6 +12,9 @@ interface UserTotal {
   total: number;
 }
 
+// Cache for stats by groupId (exported for prefetching)
+export const statsCache = new Map<string, UserTotal[]>();
+
 const Stats = ({ groupId }: StatsProps) => {
   const [totals, setTotals] = useState<UserTotal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,20 +23,33 @@ const Stats = ({ groupId }: StatsProps) => {
 
   useEffect(() => {
     if (groupId) {
-    fetchTotals();
+      fetchTotals();
     }
   }, [groupId]);
 
   const fetchTotals = async () => {
+    // Check cache first - show immediately if available
+    const cached = statsCache.get(groupId);
+    if (cached) {
+      setTotals(cached);
+      setLoading(false);
+      // Fetch fresh data in background
+    } else {
+      setLoading(true);
+    }
+
     try {
       const response = await apiClient.get('/stats/totals', { params: { groupId } });
-      setTotals(response.data);
+      const statsData = response.data;
+      statsCache.set(groupId, statsData);
+      setTotals(statsData);
       setLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to load statistics');
       setLoading(false);
     }
   };
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -49,7 +65,8 @@ const Stats = ({ groupId }: StatsProps) => {
     return b.total - a.total;
   });
 
-  if (loading) {
+  // Only show loading if we don't have cached data
+  if (loading && totals.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-lg text-gray-600">Loading...</div>

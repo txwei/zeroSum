@@ -74,6 +74,11 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
           localStorage.removeItem('selectedGroupId');
         }
       }
+
+      // Prefetch all data after groups are loaded (non-blocking)
+      if (fetchedGroups.length > 0) {
+        setTimeout(() => prefetchAllData(fetchedGroups), 500);
+      }
     } catch (error) {
       console.error('Failed to fetch groups:', error);
     } finally {
@@ -135,6 +140,50 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       fetchGroups();
     }
   }, [user]);
+
+  const prefetchAllData = (groupsToPrefetch: Group[]) => {
+    if (groupsToPrefetch.length === 0) {
+      return; // No groups to prefetch
+    }
+
+    // Prefetch all group details, games, and stats for each group (non-blocking)
+    groupsToPrefetch.forEach(group => {
+      // Prefetch group details
+      prefetchGroupDetails(group._id);
+
+      // Prefetch games (using dynamic import to avoid circular dependency)
+      import('../pages/Dashboard').then(module => {
+        const gameListCache = (module as any).gameListCache;
+        if (gameListCache && !gameListCache.has(group._id)) {
+          apiClient.get('/games', { params: { groupId: group._id } })
+            .then(response => {
+              gameListCache.set(group._id, response.data);
+            })
+            .catch(() => {
+              // Silently fail for prefetch
+            });
+        }
+      }).catch(() => {
+        // Silently fail
+      });
+
+      // Prefetch stats
+      import('../pages/Stats').then(module => {
+        const statsCache = (module as any).statsCache;
+        if (statsCache && !statsCache.has(group._id)) {
+          apiClient.get('/stats/totals', { params: { groupId: group._id } })
+            .then(response => {
+              statsCache.set(group._id, response.data);
+            })
+            .catch(() => {
+              // Silently fail for prefetch
+            });
+        }
+      }).catch(() => {
+        // Silently fail
+      });
+    });
+  };
 
   const selectedGroup = selectedGroupId
     ? groups.find((g) => g._id === selectedGroupId) || null

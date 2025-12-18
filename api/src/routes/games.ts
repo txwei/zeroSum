@@ -7,6 +7,7 @@ import { isGroupMember } from '../middleware/groupAuth';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { emitGameUpdate } from '../socket';
 
 const router = express.Router();
 
@@ -149,6 +150,9 @@ router.put('/public/:token', async (req: Request, res: Response) => {
     await game.populate('createdByUserId', 'username displayName');
     await game.populate('groupId', 'name');
 
+    // Emit real-time update
+    emitGameUpdate(token, game.toJSON());
+
     res.json(game);
   } catch (error) {
     console.error('Update public game error:', error);
@@ -264,6 +268,9 @@ router.post('/public/:token/transactions', async (req: Request, res: Response) =
     await game.populate('createdByUserId', 'username displayName');
     await game.populate('groupId', 'name');
 
+    // Emit real-time update
+    emitGameUpdate(token, game.toJSON());
+
     res.json(game);
   } catch (error) {
     console.error('Add/update public transaction error:', error);
@@ -305,6 +312,9 @@ router.delete('/public/:token/transactions', async (req: Request, res: Response)
     await game.populate('transactions.userId', 'username displayName');
     await game.populate('createdByUserId', 'username displayName');
     await game.populate('groupId', 'name');
+
+    // Emit real-time update
+    emitGameUpdate(token, game.toJSON());
 
     res.json(game);
   } catch (error) {

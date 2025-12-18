@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose, { connectDB } from './db/mongoose';
@@ -8,10 +9,12 @@ import gameRoutes from './routes/games';
 import transactionRoutes from './routes/transactions';
 import statsRoutes from './routes/stats';
 import groupRoutes from './routes/groups';
+import { initializeSocket } from './socket';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -65,8 +68,11 @@ const startServer = async () => {
     // Connect to MongoDB first
     await connectDB();
     
+    // Initialize Socket.io
+    initializeSocket(httpServer);
+    
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`MongoDB connection state: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
     });

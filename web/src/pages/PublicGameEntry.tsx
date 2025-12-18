@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { io, Socket } from 'socket.io-client';
 import apiClient from '../api/client';
 import PlayerAutocomplete from '../components/PlayerAutocomplete';
 
@@ -49,6 +50,8 @@ const PublicGameEntry = () => {
   const [gameName, setGameName] = useState('');
   const [rows, setRows] = useState<PlayerRow[]>([]);
 
+  const socketRef = useRef<Socket | null>(null);
+
   useEffect(() => {
     if (token && token !== 'undefined') {
       fetchGame();
@@ -57,6 +60,58 @@ const PublicGameEntry = () => {
       setLoading(false);
     }
   }, [token]);
+
+  // Set up WebSocket connection for real-time updates
+  useEffect(() => {
+    if (!token || token === 'undefined') {
+      return;
+    }
+
+    // Get API base URL for Socket.io connection
+    // Socket.io connects to the server root, not /api
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    // Remove /api suffix if present for Socket.io (Socket.io doesn't use /api prefix)
+    const socketUrl = apiUrl.replace(/\/api\/?$/, '');
+    
+    // If no protocol specified and we're in production, use https
+    let finalSocketUrl = socketUrl;
+    if (!socketUrl.startsWith('http://') && !socketUrl.startsWith('https://')) {
+      finalSocketUrl = window.location.protocol === 'https:' 
+        ? `https://${socketUrl}` 
+        : `http://${socketUrl}`;
+    }
+
+    // Connect to Socket.io server
+    const socket = io(finalSocketUrl, {
+      transports: ['websocket', 'polling'],
+    });
+
+    socketRef.current = socket;
+
+    // Join the game room
+    socket.emit('join-game', token);
+
+    // Listen for game updates
+    socket.on('game-updated', (updatedGame: Game) => {
+      // Only update if we're not currently submitting (to avoid conflicts)
+      if (!submitting) {
+        setGame(updatedGame);
+      }
+    });
+
+    // Handle connection errors
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      // Fallback to polling if WebSocket fails
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.emit('leave-game', token);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [token, submitting]);
 
   useEffect(() => {
     if (game) {

@@ -53,6 +53,11 @@ router.get('/totals', authenticate, async (req: AuthRequest, res: Response) => {
 
     games.forEach((game) => {
       game.transactions.forEach((transaction) => {
+        // Skip transactions without userId (playerName-only transactions)
+        if (!transaction.userId) {
+          return;
+        }
+        
         const userId = transaction.userId._id.toString();
         const username = (transaction.userId as any).username;
         const displayName = (transaction.userId as any).displayName;
@@ -133,7 +138,7 @@ router.get('/user/:userId', authenticate, async (req: AuthRequest, res: Response
     // Calculate user's amount for each game
     const gameHistory = games.map((game) => {
       const userTransaction = game.transactions.find(
-        (t) => t.userId._id.toString() === userId
+        (t) => t.userId && t.userId._id.toString() === userId
       );
       return {
         game: {

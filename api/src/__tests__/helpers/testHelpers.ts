@@ -25,7 +25,8 @@ export interface TestGame {
   createdByUserId: mongoose.Types.ObjectId;
   groupId: mongoose.Types.ObjectId;
   transactions: Array<{
-    userId: mongoose.Types.ObjectId;
+    userId?: mongoose.Types.ObjectId;
+    playerName?: string;
     amount: number;
   }>;
 }
@@ -85,7 +86,7 @@ export async function createTestGame(
   groupId: mongoose.Types.ObjectId,
   name: string = 'Test Game',
   date: Date = new Date(),
-  transactions: Array<{ userId: mongoose.Types.ObjectId; amount: number }> = []
+  transactions: Array<{ userId?: mongoose.Types.ObjectId; playerName?: string; amount: number }> = []
 ): Promise<TestGame> {
   const game = new Game({
     name,
@@ -98,7 +99,7 @@ export async function createTestGame(
   return {
     _id: game._id,
     name: game.name,
-    date: game.date,
+    date: game.date || new Date(), // Provide default for tests
     createdByUserId: game.createdByUserId,
     groupId: game.groupId,
     transactions: game.transactions,

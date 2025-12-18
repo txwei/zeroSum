@@ -111,6 +111,9 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
     ? `${window.location.origin}${import.meta.env.BASE_URL || '/'}games/public/${game.publicToken}`
     : '';
 
+  // Check if publicToken exists before showing share button
+  const hasPublicToken = Boolean(game?.publicToken);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -174,13 +177,18 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
               </div>
             </div>
             <div className="flex space-x-2">
-              {game.publicToken && (
+              {hasPublicToken && (
                 <button
                   onClick={() => setShowShareLink(!showShareLink)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                 >
                   {showShareLink ? 'Hide Share Link' : 'Share Game'}
                 </button>
+              )}
+              {!hasPublicToken && (
+                <span className="text-xs text-gray-500 px-4 py-2">
+                  Public link not available
+                </span>
               )}
               <button
                 onClick={handleDelete}
@@ -192,7 +200,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
           </div>
         </div>
 
-        {showShareLink && game.publicToken && (
+        {showShareLink && hasPublicToken && game.publicToken && (
           <div className="px-6 py-4 bg-blue-50 border-b border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Share this link with others:

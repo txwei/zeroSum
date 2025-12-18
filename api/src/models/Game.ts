@@ -2,14 +2,15 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 import crypto from 'crypto';
 
 export interface ITransaction {
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId; // Optional - if not set, use playerName
+  playerName?: string; // Optional - if not set, use userId
   amount: number;
   createdAt: Date;
 }
 
 export interface IGame extends Document {
   name: string;
-  date: Date;
+  date?: Date; // Optional for public games
   createdByUserId: Types.ObjectId;
   groupId: Types.ObjectId;
   transactions: ITransaction[];
@@ -22,7 +23,12 @@ const TransactionSchema = new Schema<ITransaction>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false, // Optional - use playerName if not set
+    },
+    playerName: {
+      type: String,
+      required: false, // Optional - use userId if not set
+      trim: true,
     },
     amount: {
       type: Number,
@@ -36,6 +42,15 @@ const TransactionSchema = new Schema<ITransaction>(
   { _id: true }
 );
 
+// Validate that either userId or playerName is set
+TransactionSchema.pre('validate', function (next) {
+  if (!this.userId && !this.playerName) {
+    next(new Error('Either userId or playerName must be provided'));
+  } else {
+    next();
+  }
+});
+
 const GameSchema = new Schema<IGame>(
   {
     name: {
@@ -45,7 +60,7 @@ const GameSchema = new Schema<IGame>(
     },
     date: {
       type: Date,
-      required: true,
+      required: false, // Optional for public games
     },
     createdByUserId: {
       type: Schema.Types.ObjectId,
@@ -80,18 +95,10 @@ const GameSchema = new Schema<IGame>(
 // Generate unique public token before saving
 GameSchema.pre('save', async function (next) {
   if (!this.publicToken) {
-    let token: string;
-    let isUnique = false;
-    
-    // Generate token and ensure uniqueness
-    while (!isUnique) {
-      token = crypto.randomBytes(8).toString('base64url');
-      const existingGame = await mongoose.model('Game').findOne({ publicToken: token });
-      if (!existingGame) {
-        isUnique = true;
-        this.publicToken = token;
-      }
-    }
+    // Generate a random token - collision probability is extremely low
+    // If there's a duplicate, MongoDB unique index will catch it and we can retry at the application level
+    this.publicToken = crypto.randomBytes(8).toString('base64url');
+    console.log('Generated publicToken for game:', this.publicToken);
   }
   next();
 });

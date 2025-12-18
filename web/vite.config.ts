@@ -1,7 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// Base path for GitHub Pages (set to repo name if deploying to username.github.io/repo-name)
+// Leave empty if deploying to username.github.io (root domain)
+const base = process.env.GITHUB_PAGES_BASE || '/';
+
 export default defineConfig({
+  base,
   plugins: [react()],
   server: {
     port: 3000,

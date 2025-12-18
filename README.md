@@ -219,6 +219,41 @@ zeroSum/
 - **API not reachable**: Check Railway logs and ensure the service is running
 - **Environment variables not working**: Make sure variables are set in the correct service (Railway for backend, Vercel for frontend)
 
+### Option 2: Deploy Frontend to GitHub Pages (Free)
+
+#### Step 1: Enable GitHub Pages
+1. Go to your GitHub repository
+2. Click **Settings** → **Pages**
+3. Under **Source**, select **GitHub Actions**
+4. Save
+
+#### Step 2: Set GitHub Secret
+1. Go to **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `VITE_API_URL`
+4. Value: Your Railway backend URL + `/api` (e.g., `https://zerosum-production.up.railway.app/api`)
+5. Click **Add secret**
+
+#### Step 3: Update Backend CORS
+1. Go to Railway → Your backend service → Variables
+2. Set `FRONTEND_URL` to your GitHub Pages URL:
+   - If repo is `username.github.io`: `https://username.github.io`
+   - If repo has different name: `https://username.github.io/repo-name`
+
+#### Step 4: Deploy
+1. Push your code to the `main` branch
+2. GitHub Actions will automatically build and deploy
+3. Check the **Actions** tab for deployment status
+4. Your site will be live at your GitHub Pages URL
+
+#### Troubleshooting GitHub Pages
+- **Build fails**: Check that `VITE_API_URL` secret is set correctly
+- **CORS errors**: Verify `FRONTEND_URL` in Railway matches your GitHub Pages URL exactly
+- **404 on routes**: Make sure base path in `vite.config.ts` matches your deployment path
+- **API calls fail**: Verify `VITE_API_URL` secret includes `/api` at the end
+
+For detailed setup instructions, see `web/GITHUB_PAGES_SETUP.md`
+
 ## License
 
 ISC

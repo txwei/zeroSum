@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB } from './db/mongoose';
+import mongoose, { connectDB } from './db/mongoose';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import gameRoutes from './routes/games';
@@ -21,8 +21,24 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB();
+// Database connection check middleware (except for health check)
+app.use((req, res, next) => {
+  // Allow health check without DB connection
+  if (req.path === '/api/health') {
+    return next();
+  }
+  
+  // Check if database is connected
+  if (mongoose.connection.readyState !== 1) {
+    console.error('Database not connected. ReadyState:', mongoose.connection.readyState);
+    return res.status(503).json({ 
+      error: 'Database connection not available',
+      readyState: mongoose.connection.readyState 
+    });
+  }
+  
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -34,13 +50,33 @@ app.use('/api/stats', statsRoutes);
 
 // Basic health check route
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    database: dbStatus,
+    readyState: mongoose.connection.readyState
+  });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Start server after database connection
+const startServer = async () => {
+  try {
+    // Connect to MongoDB first
+    await connectDB();
+    
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`MongoDB connection state: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;
 

@@ -38,10 +38,29 @@ jobs:
         working-directory: ./web
         run: npm ci
 
+      - name: Determine base path
+        id: base-path
+        run: |
+          # Check if custom base path is set in secrets, otherwise auto-detect
+          if [ -n "${{ secrets.GITHUB_PAGES_BASE }}" ]; then
+            echo "base=${{ secrets.GITHUB_PAGES_BASE }}" >> $GITHUB_OUTPUT
+          else
+            REPO_NAME="${{ github.repository }}"
+            REPO_OWNER="${REPO_NAME%%/*}"
+            REPO_NAME_ONLY="${REPO_NAME#*/}"
+            if [[ "$REPO_NAME_ONLY" == "$REPO_OWNER.github.io" ]]; then
+              echo "base=/" >> $GITHUB_OUTPUT
+            else
+              echo "base=/$REPO_NAME_ONLY/" >> $GITHUB_OUTPUT
+            fi
+          fi
+          echo "Using base path: $(cat $GITHUB_OUTPUT | grep base= | cut -d= -f2)"
+
       - name: Build
         working-directory: ./web
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://zerosum-production.up.railway.app/api' }}
+          GITHUB_PAGES_BASE: ${{ steps.base-path.outputs.base }}
         run: npm run build
 
       - name: Setup Pages

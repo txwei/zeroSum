@@ -24,27 +24,26 @@ This guide will help you deploy the frontend to GitHub Pages.
    - Example: `https://zerosum-production.up.railway.app/api`
 6. Click **Add secret**
 
-## Step 3: Configure Base Path (if needed)
+## Step 3: Configure Base Path
 
-### Option A: Deploy to `username.github.io` (root domain)
+The workflow **automatically detects** the base path based on your repository name:
 
-If your repository is named `username.github.io`, the base path is already set to `/` in `vite.config.ts`.
+- If repo is `username.github.io` → base path is `/` (root domain)
+- If repo has a different name (e.g., `zeroSum`) → base path is `/repo-name/`
 
-### Option B: Deploy to `username.github.io/repo-name` (subpath)
+**Your GitHub Pages URL will be:**
+- `https://username.github.io` (if repo is `username.github.io`)
+- `https://username.github.io/repo-name` (if repo has a different name)
 
-If your repository has a different name, you need to set the base path:
+### Manual Override (if needed)
 
-1. Update `.github/workflows/deploy-frontend.yml`:
-   ```yaml
-   - name: Build
-     working-directory: ./web
-     env:
-       VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://zerosum-production.up.railway.app/api' }}
-       GITHUB_PAGES_BASE: '/your-repo-name/'  # Add this line
-     run: npm run build
-   ```
+If you need to override the auto-detected base path (e.g., for custom domain):
 
-2. Replace `your-repo-name` with your actual repository name
+1. Go to **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `GITHUB_PAGES_BASE`
+4. Value: Your desired base path (e.g., `/` for root, `/zeroSum/` for subpath)
+5. Click **Add secret**
 
 ## Step 4: Update CORS on Railway Backend
 
@@ -56,12 +55,20 @@ Make sure your Railway backend allows requests from your GitHub Pages URL:
 
 ## Step 5: Deploy
 
-1. Push your code to the `main` branch
+1. Push your code to the `main` branch:
+   ```bash
+   git add .
+   git commit -m "Deploy to GitHub Pages"
+   git push origin main
+   ```
+
 2. GitHub Actions will automatically build and deploy
 3. Check the **Actions** tab to see the deployment progress
 4. Your site will be available at:
    - `https://username.github.io` (if repo is `username.github.io`)
    - `https://username.github.io/repo-name` (if repo has a different name)
+
+   **For your repo (`txwei/zeroSum`), the URL is: `https://txwei.github.io/zeroSum`**
 
 ## Troubleshooting
 

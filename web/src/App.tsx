@@ -43,8 +43,12 @@ const AppRoutes = () => {
 };
 
 function App() {
+  // Get base path from Vite's base config (for GitHub Pages)
+  // In production, this will be '/zeroSum/' or '/' depending on deployment
+  const basePath = import.meta.env.BASE_URL || '/';
+  
   return (
-    <Router>
+    <Router basename={basePath}>
       <AuthProvider>
         <GroupProvider>
         <AppRoutes />

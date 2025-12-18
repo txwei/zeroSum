@@ -25,6 +25,7 @@ const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [createdGame, setCreatedGame] = useState<{ publicToken: string; name: string } | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -70,19 +71,95 @@ const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
         amount: t.amount,
       }));
       
-      await apiClient.post('/games', {
+      const response = await apiClient.post('/games', {
         name: name.trim(),
         date,
         groupId,
         transactions: normalizedTransactions,
       });
-      onClose();
-      // Refresh will be handled by parent
+      
+      // Store created game info to show share link
+      setCreatedGame({
+        publicToken: response.data.publicToken,
+        name: response.data.name,
+      });
+      setLoading(false);
+      // Don't close immediately - show share link first
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create game');
       setLoading(false);
     }
   };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      // Show brief success feedback
+      const button = document.getElementById('copy-button');
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+          if (button) button.textContent = originalText;
+        }, 2000);
+      }
+    });
+  };
+
+  const publicLink = createdGame
+    ? `${window.location.origin}${import.meta.env.BASE_URL || '/'}games/public/${createdGame.publicToken}`
+    : '';
+
+  if (createdGame) {
+    return (
+      <div className="px-4 sm:px-0">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Game Created!</h1>
+        
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+          <p className="font-medium">✓ {createdGame.name} has been created successfully!</p>
+        </div>
+
+        <div className="bg-white shadow rounded-lg p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Share this link with others to let them enter their transactions:
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                readOnly
+                value={publicLink}
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50"
+              />
+              <button
+                id="copy-button"
+                type="button"
+                onClick={() => copyToClipboard(publicLink)}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Copy Link
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Anyone with this link can view the game and enter their transactions without logging in.
+            </p>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setCreatedGame(null);
+                onClose();
+              }}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 sm:px-0">

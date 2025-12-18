@@ -12,6 +12,7 @@ interface Game {
   _id: string;
   name: string;
   date: string;
+  publicToken?: string;
   createdByUserId: {
     _id: string;
     username: string;
@@ -36,6 +37,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showShareLink, setShowShareLink] = useState(false);
 
   useEffect(() => {
     if (gameId) {
@@ -90,6 +92,24 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
       currency: 'USD',
     }).format(amount);
   };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      // Show brief success feedback
+      const button = document.getElementById('copy-share-button');
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        setTimeout(() => {
+          if (button) button.textContent = originalText;
+        }, 2000);
+      }
+    });
+  };
+
+  const publicLink = game?.publicToken
+    ? `${window.location.origin}${import.meta.env.BASE_URL || '/'}games/public/${game.publicToken}`
+    : '';
 
   if (loading) {
     return (
@@ -153,14 +173,51 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
                 )}
               </div>
             </div>
-            <button
-              onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Delete Game
-            </button>
+            <div className="flex space-x-2">
+              {game.publicToken && (
+                <button
+                  onClick={() => setShowShareLink(!showShareLink)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                >
+                  {showShareLink ? 'Hide Share Link' : 'Share Game'}
+                </button>
+              )}
+              <button
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              >
+                Delete Game
+              </button>
+            </div>
           </div>
         </div>
+
+        {showShareLink && game.publicToken && (
+          <div className="px-6 py-4 bg-blue-50 border-b border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Share this link with others:
+            </label>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                readOnly
+                value={publicLink}
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white"
+              />
+              <button
+                id="copy-share-button"
+                type="button"
+                onClick={() => copyToClipboard(publicLink)}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Copy Link
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-gray-600">
+              Anyone with this link can view the game and enter their transactions without logging in.
+            </p>
+          </div>
+        )}
 
         <div className="px-6 py-4">
           <div className="mb-4">

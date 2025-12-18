@@ -1,11 +1,211 @@
-import express, { Response } from 'express';
+import express, { Response, Request } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { Game } from '../models/Game';
 import { Group } from '../models/Group';
+import { User } from '../models/User';
 import { isGroupMember } from '../middleware/groupAuth';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const router = express.Router();
+
+// ========== PUBLIC ROUTES (No authentication required) ==========
+
+// Get game by public token
+router.get('/public/:token', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const game = await Game.findOne({ publicToken: token })
+      .populate('transactions.userId', 'username displayName')
+      .populate('createdByUserId', 'username displayName')
+      .populate('groupId', 'name');
+
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    res.json(game);
+  } catch (error) {
+    console.error('Get public game error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get group members for public game
+router.get('/public/:token/members', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    const group = await Group.findById(game.groupId).populate('memberIds', 'username displayName');
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    res.json(group.memberIds);
+  } catch (error) {
+    console.error('Get public game members error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add/update transaction via public link
+router.post('/public/:token/transactions', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { userId, amount } = req.body;
+
+    if (!userId || amount === undefined) {
+      res.status(400).json({ error: 'userId and amount are required' });
+      return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      res.status(400).json({ error: 'Invalid user ID' });
+      return;
+    }
+
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Verify user is a member of the group
+    const group = await Group.findById(game.groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const isMember = group.memberIds.some(
+      (memberId) => memberId.toString() === userId
+    );
+    if (!isMember) {
+      res.status(403).json({ error: 'User is not a member of this group' });
+      return;
+    }
+
+    // Find existing transaction for this user
+    const existingIndex = game.transactions.findIndex(
+      (t) => t.userId.toString() === userId
+    );
+
+    if (existingIndex >= 0) {
+      // Update existing transaction
+      game.transactions[existingIndex].amount = amount;
+    } else {
+      // Add new transaction
+      game.transactions.push({
+        userId: userIdObj,
+        amount,
+        createdAt: new Date(),
+      });
+    }
+
+    // Validate zero-sum
+    const sum = game.transactions.reduce((acc, t) => acc + t.amount, 0);
+    if (Math.abs(sum) > 0.01) {
+      res.status(400).json({
+        error: 'Transactions must sum to zero',
+        currentSum: sum,
+      });
+      return;
+    }
+
+    await game.save();
+    await game.populate('transactions.userId', 'username displayName');
+    await game.populate('createdByUserId', 'username displayName');
+    await game.populate('groupId', 'name');
+
+    res.json(game);
+  } catch (error) {
+    console.error('Add/update public transaction error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Quick signup via public link
+router.post('/public/:token/quick-signup', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { username, displayName, password } = req.body;
+
+    if (!username || !displayName) {
+      res.status(400).json({ error: 'username and displayName are required' });
+      return;
+    }
+
+    // Check if game exists
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Check if username already exists
+    const existingUser = await User.findOne({ username: username.toLowerCase() });
+    if (existingUser) {
+      res.status(400).json({ error: 'Username already exists' });
+      return;
+    }
+
+    // Hash password if provided, otherwise use a default
+    const passwordToHash = password || crypto.randomBytes(16).toString('hex');
+    const passwordHash = await bcrypt.hash(passwordToHash, 10);
+
+    // Create user
+    const user = new User({
+      username: username.toLowerCase(),
+      displayName,
+      passwordHash,
+    });
+
+    await user.save();
+
+    // Auto-add user to the game's group
+    const group = await Group.findById(game.groupId);
+    if (!group) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    const userIdStr = user._id.toString();
+    const isMember = group.memberIds.some(
+      (memberId) => memberId.toString() === userIdStr
+    );
+    if (!isMember) {
+      group.memberIds.push(user._id);
+      await group.save();
+    }
+
+    // Return user without password
+    const userResponse = {
+      _id: user._id,
+      id: user._id,
+      username: user.username,
+      displayName: user.displayName,
+      createdAt: user.createdAt,
+    };
+
+    res.status(201).json(userResponse);
+  } catch (error) {
+    console.error('Quick signup error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== AUTHENTICATED ROUTES ==========
 
 // Create game
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {

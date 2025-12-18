@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Groups from './pages/Groups';
 import GroupDetails from './pages/GroupDetails';
+import PublicGameEntry from './pages/PublicGameEntry';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
@@ -26,6 +27,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/games/public/:token" element={<PublicGameEntry />} />
       <Route
         path="/"
         element={

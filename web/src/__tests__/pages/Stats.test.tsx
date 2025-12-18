@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Stats from '../../pages/Stats';
 import { AuthProvider } from '../../context/AuthContext';

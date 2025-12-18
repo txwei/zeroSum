@@ -16,7 +16,7 @@ describe('AuthContext', () => {
   });
 
   it('should initialize with no user when no token in localStorage', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+    const { result } = renderHook(() => useAuth(), { wrapper });
     
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

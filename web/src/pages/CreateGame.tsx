@@ -14,7 +14,7 @@ interface User {
 }
 
 interface Transaction {
-  userId: string;
+  userId: string | { _id?: string; id?: string };
   amount: number;
 }
 
@@ -64,11 +64,17 @@ const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
     setLoading(true);
 
     try {
+      // Normalize transactions - ensure userId is always a string
+      const normalizedTransactions = transactions.map(t => ({
+        userId: typeof t.userId === 'string' ? t.userId : (t.userId as any)?._id || (t.userId as any)?.id || '',
+        amount: t.amount,
+      }));
+      
       await apiClient.post('/games', {
         name: name.trim(),
         date,
         groupId,
-        transactions,
+        transactions: normalizedTransactions,
       });
       onClose();
       // Refresh will be handled by parent

@@ -42,7 +42,6 @@ describe('Groups Page', () => {
       { _id: '2', name: 'Group 2', memberIds: [], createdAt: new Date().toISOString() },
     ];
     
-    const { useGroup } = require('../../context/GroupContext');
     jest.spyOn(require('../../context/GroupContext'), 'useGroup').mockReturnValue({
       groups: mockGroups,
       loading: false,

@@ -372,11 +372,7 @@ const Stats = ({ groupId }: StatsProps) => {
             </div>
           )}
 
-          {selectedPlayers.length === 0 ? (
-            <div className="flex items-center justify-center py-12 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">Select at least one player to view trends</p>
-            </div>
-          ) : trendLoading && trendData.length === 0 ? (
+          {trendLoading && trendData.length === 0 && selectedPlayers.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center space-x-2 text-gray-600">
                 <svg
@@ -401,10 +397,6 @@ const Stats = ({ groupId }: StatsProps) => {
                 </svg>
                 <span className="text-sm font-medium">Loading trend data...</span>
               </div>
-            </div>
-          ) : trendData.length === 0 ? (
-            <div className="flex items-center justify-center py-12 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No trend data available</p>
             </div>
           ) : (
             <div className="w-full relative bg-gray-50" style={{ height: '500px', minHeight: '500px' }}>
@@ -436,11 +428,11 @@ const Stats = ({ groupId }: StatsProps) => {
                   </div>
                 </div>
               )}
-              {/* Chart - render when we have data */}
+              {/* Chart - always render, even when empty */}
               <div className="transition-opacity duration-300" style={{ width: '100%', height: '500px' }}>
                 <ResponsiveContainer width="100%" height={500}>
                   <LineChart 
-                    data={trendData}
+                    data={trendData.length > 0 ? trendData : []}
                     margin={{ top: 20, right: 20, left: 10, bottom: 60 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -480,27 +472,33 @@ const Stats = ({ groupId }: StatsProps) => {
                       wrapperStyle={{ paddingTop: '20px' }}
                       iconType="line"
                     />
-                      {selectedPlayers.map((playerId, index) => {
-                        const style = lineStyles[index % lineStyles.length];
-                        return (
-                          <Line
-                            key={playerId}
-                            type="monotone"
-                            dataKey={playerId}
-                            stroke={style.color}
-                            strokeWidth={style.strokeWidth}
-                            dot={{ r: 4, fill: style.color, strokeWidth: 2, stroke: '#fff' }}
-                            activeDot={{ r: 6, fill: style.color, strokeWidth: 2, stroke: '#fff' }}
-                            name={playerId}
-                            connectNulls={true}
-                            animationDuration={300}
-                            isAnimationActive={true}
-                          />
-                        );
-                      })}
+                    {selectedPlayers.map((playerId, index) => {
+                      const style = lineStyles[index % lineStyles.length];
+                      return (
+                        <Line
+                          key={playerId}
+                          type="monotone"
+                          dataKey={playerId}
+                          stroke={style.color}
+                          strokeWidth={style.strokeWidth}
+                          dot={{ r: 4, fill: style.color, strokeWidth: 2, stroke: '#fff' }}
+                          activeDot={{ r: 6, fill: style.color, strokeWidth: 2, stroke: '#fff' }}
+                          name={playerId}
+                          connectNulls={true}
+                          animationDuration={300}
+                          isAnimationActive={true}
+                        />
+                      );
+                    })}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+              {/* Empty state message overlay */}
+              {selectedPlayers.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <p className="text-gray-400 text-sm">Select players to view trends</p>
+                </div>
+              )}
             </div>
           )}
         </div>

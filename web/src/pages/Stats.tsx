@@ -430,6 +430,14 @@ const Stats = ({ groupId }: StatsProps) => {
               )}
               {/* Chart - always render, even when empty */}
               <div className="transition-opacity duration-300" style={{ width: '100%', height: '500px' }}>
+                {/* Chart Title - Above the chart */}
+                <div className="absolute -top-1 left-0 right-0 flex justify-center z-20 pointer-events-none">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-4 py-1.5 rounded-full shadow-sm backdrop-blur-sm bg-opacity-95">
+                    <h3 className="text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                      Net Profit Over Time
+                    </h3>
+                  </div>
+                </div>
                 <ResponsiveContainer width="100%" height={500}>
                   <LineChart 
                     data={trendData.length > 0 ? trendData : []}

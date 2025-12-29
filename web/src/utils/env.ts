@@ -11,10 +11,14 @@ export function getBasePath(): string {
     return '/';
   }
   
-  // In Vite, import.meta.env.BASE_URL will be replaced at build time
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - import.meta is available in Vite but not in Jest (handled above)
-  return import.meta.env.BASE_URL || '/';
+  // Use eval to prevent Jest from parsing import.meta at compile time
+  // In Vite, this will work normally
+  try {
+    // eslint-disable-next-line no-eval
+    return eval('import.meta.env.BASE_URL') || '/';
+  } catch {
+    return '/';
+  }
 }
 
 /**
@@ -26,10 +30,14 @@ export function getApiUrl(): string | undefined {
     return undefined;
   }
   
-  // In Vite, import.meta.env.VITE_API_URL will be replaced at build time
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - import.meta is available in Vite but not in Jest (handled above)
-  return import.meta.env.VITE_API_URL;
+  // Use eval to prevent Jest from parsing import.meta at compile time
+  // In Vite, this will work normally
+  try {
+    // eslint-disable-next-line no-eval
+    return eval('import.meta.env.VITE_API_URL');
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -41,9 +49,13 @@ export function isDev(): boolean {
     return false;
   }
   
-  // In Vite, import.meta.env.DEV will be replaced at build time
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore - import.meta is available in Vite but not in Jest (handled above)
-  return import.meta.env.DEV === true;
+  // Use eval to prevent Jest from parsing import.meta at compile time
+  // In Vite, this will work normally
+  try {
+    // eslint-disable-next-line no-eval
+    return eval('import.meta.env.DEV') === true;
+  } catch {
+    return false;
+  }
 }
 

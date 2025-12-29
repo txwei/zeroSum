@@ -19,11 +19,12 @@ interface Game {
     name: string;
   };
   transactions: Array<{
-    userId: {
+    userId?: {
       _id: string;
       username: string;
       displayName: string;
     };
+    playerName?: string;
     amount: number;
   }>;
 }
@@ -76,6 +77,33 @@ const Dashboard = ({ groupId }: DashboardProps) => {
       fetchGames();
     }
   }, [groupId]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC to close modals
+      if (e.key === 'Escape') {
+        if (selectedGameId) {
+          setSelectedGameId(null);
+        } else if (showCreateForm) {
+          setShowCreateForm(false);
+        }
+      }
+      // 'n' or 'c' to create new game (when no modal is open)
+      else if ((e.key === 'n' || e.key === 'c') && !selectedGameId && !showCreateForm) {
+        e.preventDefault();
+        setShowCreateForm(true);
+      }
+      // 'm' to toggle "My Games" filter
+      else if (e.key === 'm' && !selectedGameId && !showCreateForm) {
+        e.preventDefault();
+        setFilterMyGames(!filterMyGames);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedGameId, showCreateForm, filterMyGames]);
 
   const fetchGames = async () => {
     // Check cache first - show immediately if available
@@ -175,12 +203,25 @@ const Dashboard = ({ groupId }: DashboardProps) => {
             {filterMyGames ? 'Show All' : 'My Games Only'}
           </button>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          Create New Game
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* Keyboard shortcuts hint */}
+          <div className="hidden md:flex items-center text-xs text-gray-500 space-x-2">
+            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">N</kbd>
+            <span>New game</span>
+            <span className="mx-1">•</span>
+            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">M</kbd>
+            <span>My games</span>
+            <span className="mx-1">•</span>
+            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">ESC</kbd>
+            <span>Close</span>
+          </div>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Create New Game
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -239,6 +280,58 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                             {game.transactions.length !== 1 ? 's' : ''}
                           </p>
                         </div>
+                        {/* Participant names */}
+                        {game.transactions.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {(() => {
+                              // Find max and min amounts
+                              const amounts = game.transactions.map(t => t.amount);
+                              const maxAmount = Math.max(...amounts);
+                              const minAmount = Math.min(...amounts);
+                              
+                              return game.transactions.map((transaction, idx) => {
+                                const displayName = transaction.userId?.displayName || transaction.playerName || 'Unknown';
+                                const amount = transaction.amount;
+                                const isWinner = amount > 0;
+                                const isLoser = amount < 0;
+                                const isBiggestWinner = amount === maxAmount && amount > 0;
+                                const isBiggestLoser = amount === minAmount && amount < 0;
+                                
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                      isBiggestWinner
+                                        ? 'bg-green-50 text-green-800 ring-1 ring-green-400 shadow-sm'
+                                        : isWinner
+                                        ? 'bg-green-50 text-green-700 ring-1 ring-green-300'
+                                        : isBiggestLoser
+                                        ? 'bg-red-50 text-red-800 ring-1 ring-red-400 shadow-sm'
+                                        : isLoser
+                                        ? 'bg-red-50 text-red-700 ring-1 ring-red-300'
+                                        : 'bg-gray-100 text-gray-700'
+                                    }`}
+                                  >
+                                    {isBiggestWinner && '🏆 '}
+                                    {isWinner && !isBiggestWinner && '💰 '}
+                                    {isBiggestLoser && '💔 '}
+                                    {isLoser && !isBiggestLoser && '💸 '}
+                                    {displayName}
+                                    <span className={`ml-1 font-semibold ${
+                                      isBiggestWinner ? 'text-green-700' : 
+                                      isWinner ? 'text-green-600' : 
+                                      isBiggestLoser ? 'text-red-700' :
+                                      isLoser ? 'text-red-600' : 
+                                      'text-gray-500'
+                                    }`}>
+                                      {amount > 0 ? '+' : ''}{formatCurrency(amount)}
+                                    </span>
+                                  </span>
+                                );
+                              });
+                            })()}
+                          </div>
+                        )}
                       </div>
                       <div className="ml-5 flex-shrink-0">
                         <svg

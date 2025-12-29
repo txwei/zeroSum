@@ -54,6 +54,7 @@ const PublicGameEntry = () => {
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track pending saves
   const rowsRef = useRef<TransactionRow[]>([]); // Keep ref for beforeunload
   const addingRowRef = useRef<boolean>(false); // Track if we're currently adding a row
+  const deletingRowRef = useRef<boolean>(false); // Track if we're currently deleting a row
 
   // Helper function to format date to YYYY-MM-DD
   // The date is stored as UTC midnight, so we need to extract the UTC date components
@@ -66,6 +67,31 @@ const PublicGameEntry = () => {
     const month = String(date.getUTCMonth() + 1).padStart(2, '0');
     const day = String(date.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // Safely evaluate math expressions (Excel-style formulas)
+  const evaluateExpression = (expr: string): number | null => {
+    try {
+      // Remove whitespace and the leading "="
+      const cleanExpr = expr.trim().substring(1).trim();
+      
+      // Only allow numbers, operators, parentheses, and decimal points
+      if (!/^[0-9+\-*/().\s]+$/.test(cleanExpr)) {
+        return null;
+      }
+      
+      // Use Function constructor for safe evaluation (safer than eval)
+      // Only allows mathematical expressions
+      const result = new Function(`return ${cleanExpr}`)();
+      
+      // Verify result is a valid number
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+        return result;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -196,32 +222,35 @@ const PublicGameEntry = () => {
       }
       // Update rows from server (this is the authoritative state)
       // But preserve any fields that are currently being edited to prevent flickering
-      setRows((currentRows) => {
-        const newRows: TransactionRow[] = updatedGame.transactions.map((t, idx) => {
-          // Use playerName only - hide placeholder underscore
-          const displayName = t.playerName && t.playerName !== '_' ? t.playerName : '';
-          
-          // If we're currently editing this field, keep the current value to prevent flicker
-          const playerNameKey = `${idx}-playerName`;
-          const amountKey = `${idx}-amount`;
-          const isEditingPlayerName = updatingFieldsRef.current.has(playerNameKey);
-          const isEditingAmount = updatingFieldsRef.current.has(amountKey);
-          
-          // Preserve current value if actively editing
-          const currentRow = currentRows[idx];
-          return {
-            index: idx,
-            playerName: isEditingPlayerName && currentRow ? currentRow.playerName : displayName,
-            amount: isEditingAmount && currentRow ? currentRow.amount : t.amount.toString(),
-          };
+      // Also skip if we're currently adding a row to prevent race condition
+      if (!addingRowRef.current && !deletingRowRef.current) {
+        setRows((currentRows) => {
+          const newRows: TransactionRow[] = updatedGame.transactions.map((t, idx) => {
+            // Use playerName only - hide placeholder underscore
+            const displayName = t.playerName && t.playerName !== '_' ? t.playerName : '';
+            
+            // If we're currently editing this field, keep the current value to prevent flicker
+            const playerNameKey = `${idx}-playerName`;
+            const amountKey = `${idx}-amount`;
+            const isEditingPlayerName = updatingFieldsRef.current.has(playerNameKey);
+            const isEditingAmount = updatingFieldsRef.current.has(amountKey);
+            
+            // Preserve current value if actively editing
+            const currentRow = currentRows[idx];
+            return {
+              index: idx,
+              playerName: isEditingPlayerName && currentRow ? currentRow.playerName : displayName,
+              amount: isEditingAmount && currentRow ? currentRow.amount : t.amount.toString(),
+            };
+          });
+          // Ensure at least one empty row
+          if (newRows.length === 0) {
+            newRows.push({ index: 0, playerName: '', amount: '' });
+          }
+          rowsRef.current = newRows;
+          return newRows;
         });
-        // Ensure at least one empty row
-        if (newRows.length === 0) {
-          newRows.push({ index: 0, playerName: '', amount: '' });
-        }
-        rowsRef.current = newRows;
-        return newRows;
-      });
+      }
     });
 
     return () => {
@@ -397,6 +426,9 @@ const PublicGameEntry = () => {
     const fieldKey = `${rowId}-${field}`;
     updatingFieldsRef.current.add(fieldKey);
 
+    // Don't evaluate formulas automatically - just store the value as-is
+    const processedValue = value;
+
     // Optimistic update
     setRows((currentRows) => {
       const newRows = [...currentRows];
@@ -404,10 +436,10 @@ const PublicGameEntry = () => {
         if (field === 'playerName') {
           newRows[rowId] = { 
             ...newRows[rowId], 
-            playerName: value as string,
+            playerName: processedValue as string,
           };
         } else if (field === 'amount') {
-          newRows[rowId] = { ...newRows[rowId], amount: value.toString() };
+          newRows[rowId] = { ...newRows[rowId], amount: processedValue.toString() };
         }
       }
       rowsRef.current = newRows; // Keep ref in sync
@@ -420,7 +452,7 @@ const PublicGameEntry = () => {
         gameToken: token,
         rowId,
         field,
-        value,
+        value: processedValue,
       });
     }
 
@@ -431,9 +463,20 @@ const PublicGameEntry = () => {
       // Only save if row exists
       const currentRows = rowsRef.current;
       if (rowId >= 0 && rowId < currentRows.length) {
+        // For amount field, validate before saving
+        if (field === 'amount') {
+          const numValue = parseFloat(processedValue as string);
+          // Don't save if value is invalid (empty, NaN, or just partial input like "-" or ".")
+          // Also don't save if it's still a formula (starts with =)
+          if (isNaN(numValue) || processedValue === '' || processedValue === '-' || processedValue === '.' || (typeof processedValue === 'string' && processedValue.startsWith('='))) {
+            // Skip save for invalid/incomplete input
+            return;
+          }
+        }
+        
         const payload: any = {
           field,
-          value: field === 'amount' ? parseFloat(value as string) : value,
+          value: field === 'amount' ? parseFloat(processedValue as string) : processedValue,
         };
         try {
           const response = await apiClient.patch(`/games/public/${token}/transaction/${rowId}`, payload);
@@ -600,10 +643,13 @@ const PublicGameEntry = () => {
         amount: 0,
       });
       // Update with server response to ensure sync
-      if (response.data) {
-        setGame(response.data);
-      }
-      addingRowRef.current = false;
+      // Wait a bit before allowing game-updated to process
+      setTimeout(() => {
+        addingRowRef.current = false;
+        if (response.data) {
+          setGame(response.data);
+        }
+      }, 100);
     } catch (err) {
       console.error('Failed to add row:', err);
       addingRowRef.current = false;
@@ -623,6 +669,8 @@ const PublicGameEntry = () => {
       return;
     }
 
+    deletingRowRef.current = true;
+    
     // Store current state for potential revert
     const previousRows = [...rows];
 
@@ -647,11 +695,16 @@ const PublicGameEntry = () => {
     try {
       const response = await apiClient.delete(`/games/public/${token}/transaction/${rowId}`);
       // Update with server response to ensure sync
-      if (response.data) {
-        setGame(response.data);
-      }
+      // Wait a bit before allowing game-updated to process
+      setTimeout(() => {
+        deletingRowRef.current = false;
+        if (response.data) {
+          setGame(response.data);
+        }
+      }, 100);
     } catch (err) {
       console.error('Failed to delete row:', err);
+      deletingRowRef.current = false;
       // Revert on error
       setRows(previousRows);
       rowsRef.current = previousRows;
@@ -947,12 +1000,38 @@ const PublicGameEntry = () => {
                               {getCurrencySymbol()}
                             </span>
                             <input
-                              type="number"
-                              step="0.01"
+                              type="text"
                               value={row.amount}
                               onChange={(e) => updateField(row.index, 'amount', e.target.value)}
-                              onBlur={(e) => updateField(row.index, 'amount', e.target.value, true)}
-                              placeholder="0.00"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  // Evaluate formula on Enter
+                                  const value = (e.target as HTMLInputElement).value;
+                                  if (value.startsWith('=')) {
+                                    const result = evaluateExpression(value);
+                                    if (result !== null) {
+                                      updateField(row.index, 'amount', result.toString(), true);
+                                    }
+                                  }
+                                  e.preventDefault();
+                                }
+                              }}
+                              onBlur={(e) => {
+                                // Also evaluate on blur (when clicking away)
+                                const value = e.target.value;
+                                if (value.startsWith('=')) {
+                                  const result = evaluateExpression(value);
+                                  if (result !== null) {
+                                    updateField(row.index, 'amount', result.toString(), true);
+                                  } else {
+                                    // Invalid formula - just save as-is
+                                    updateField(row.index, 'amount', value, true);
+                                  }
+                                } else {
+                                  updateField(row.index, 'amount', value, true);
+                                }
+                              }}
+                              placeholder="0.00 or =10+5"
                               className="w-full pl-8 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                             />
                           </div>

@@ -68,13 +68,15 @@ const startServer = async () => {
     // Connect to MongoDB first
     await connectDB();
     
-    // Initialize Socket.io
+    // Initialize Socket.io BEFORE starting the server
     initializeSocket(httpServer);
+    console.log('Socket.io initialized');
     
     // Start server
     httpServer.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`MongoDB connection state: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
+      console.log(`🚀 Server is running on port ${PORT}`);
+      console.log(`📊 MongoDB connection state: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
+      console.log(`🔌 Socket.io is ready to accept connections`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

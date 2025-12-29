@@ -24,11 +24,12 @@ interface Game {
   };
   transactions: Array<{
     _id?: string; // Optional because Dashboard Game doesn't have it
-    userId: {
+    userId?: {
       _id: string;
       username: string;
       displayName: string;
     };
+    playerName?: string;
     amount: number;
   }>;
 }
@@ -258,7 +259,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
                   {game.transactions.map((transaction) => (
                     <tr key={transaction._id}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {transaction.userId?.displayName || 'Unknown User'}
+                        {transaction.playerName || transaction.userId?.displayName || 'Unknown Player'}
                       </td>
                       <td
                         className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${

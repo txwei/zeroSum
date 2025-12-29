@@ -5,8 +5,8 @@ import { Group } from '../models/Group';
 import { User } from '../models/User';
 import { isGroupMember } from '../middleware/groupAuth';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { emitGameUpdate } from '../socket';
 
 const router = express.Router();
@@ -63,7 +63,7 @@ router.get('/public/:token/members', async (req: Request, res: Response) => {
 router.get('/public/:token/search-users', async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
-    const { q } = req.query; // Search query
+    const { q } = req.query;
 
     if (!q || typeof q !== 'string') {
       res.status(400).json({ error: 'Search query is required' });
@@ -82,7 +82,6 @@ router.get('/public/:token/search-users', async (req: Request, res: Response) =>
       return;
     }
 
-    // Search all users by displayName or username
     const searchRegex = new RegExp(q, 'i');
     const allUsers = await User.find({
       $or: [
@@ -91,7 +90,6 @@ router.get('/public/:token/search-users', async (req: Request, res: Response) =>
       ],
     }).select('username displayName').limit(10);
 
-    // Categorize users: in group vs not in group
     const groupMemberIds = group.memberIds.map(id => id.toString());
     const usersInGroup: any[] = [];
     const usersNotInGroup: any[] = [];
@@ -121,14 +119,14 @@ router.get('/public/:token/search-users', async (req: Request, res: Response) =>
   }
 });
 
-// Update game name/date via public link
-router.put('/public/:token', async (req: Request, res: Response) => {
+// Update game name - simple collaborative update
+router.put('/public/:token/name', async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
-    const { name, date } = req.body;
+    const { name } = req.body;
 
-    if (!name && !date) {
-      res.status(400).json({ error: 'name or date is required' });
+    if (!name || typeof name !== 'string') {
+      res.status(400).json({ error: 'name is required' });
       return;
     }
 
@@ -138,43 +136,31 @@ router.put('/public/:token', async (req: Request, res: Response) => {
       return;
     }
 
-    if (name) {
-      game.name = name.trim();
-    }
-    if (date) {
-      game.date = new Date(date);
+    // Check if game is settled (read-only)
+    if (game.settled) {
+      res.status(403).json({ error: 'Game is settled and cannot be edited' });
+      return;
     }
 
+    game.name = name.trim();
     await game.save();
     await game.populate('transactions.userId', 'username displayName');
     await game.populate('createdByUserId', 'username displayName');
     await game.populate('groupId', 'name');
 
-    // Emit real-time update
     emitGameUpdate(token, game.toJSON());
-
     res.json(game);
   } catch (error) {
-    console.error('Update public game error:', error);
+    console.error('Update game name error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Add/update transaction via public link (allows editing any transaction)
-router.post('/public/:token/transactions', async (req: Request, res: Response) => {
+// Update game date - simple collaborative update
+router.put('/public/:token/date', async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
-    const { userId, playerName, amount, transactionIndex } = req.body;
-
-    if (amount === undefined) {
-      res.status(400).json({ error: 'amount is required' });
-      return;
-    }
-
-    if (!userId && !playerName) {
-      res.status(400).json({ error: 'Either userId or playerName is required' });
-      return;
-    }
+    const { date } = req.body;
 
     const game = await Game.findOne({ publicToken: token });
     if (!game) {
@@ -182,116 +168,46 @@ router.post('/public/:token/transactions', async (req: Request, res: Response) =
       return;
     }
 
-    // If userId is provided, verify user is a member of the group
-    if (userId) {
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(400).json({ error: 'Invalid user ID' });
-        return;
-      }
-
-      const group = await Group.findById(game.groupId);
-      if (!group) {
-        res.status(404).json({ error: 'Group not found' });
-        return;
-      }
-
-      const isMember = group.memberIds.some(
-        (memberId) => memberId.toString() === userId
-      );
-      if (!isMember) {
-        res.status(403).json({ error: 'User is not a member of this group' });
-        return;
-      }
+    // Check if game is settled (read-only)
+    if (game.settled) {
+      res.status(403).json({ error: 'Game is settled and cannot be edited' });
+      return;
     }
 
-    // If transactionIndex is provided, update that specific transaction
-    if (transactionIndex !== undefined && transactionIndex >= 0 && transactionIndex < game.transactions.length) {
-      const transaction = game.transactions[transactionIndex];
-      transaction.amount = amount;
-      if (userId) {
-        transaction.userId = new mongoose.Types.ObjectId(userId);
-        transaction.playerName = undefined;
-      } else if (playerName) {
-        transaction.playerName = playerName.trim();
-        transaction.userId = undefined;
-      }
+    // Set date to provided value or null if empty/undefined
+    // Parse the date string (YYYY-MM-DD) and create a date at UTC midnight
+    // This prevents timezone issues where the date might shift by a day
+    if (date && typeof date === 'string' && date.trim() !== '') {
+      // Parse YYYY-MM-DD format and create date at UTC midnight
+      // This ensures the date is stored consistently regardless of server timezone
+      const [year, month, day] = date.split('-').map(Number);
+      // Create date at UTC midnight to avoid timezone shifts
+      game.date = new Date(Date.UTC(year, month - 1, day));
     } else {
-      // Find existing transaction by userId or playerName
-      let existingIndex = -1;
-      if (userId) {
-        existingIndex = game.transactions.findIndex(
-          (t) => t.userId && t.userId.toString() === userId
-        );
-      } else if (playerName) {
-        existingIndex = game.transactions.findIndex(
-          (t) => t.playerName && t.playerName.trim().toLowerCase() === playerName.trim().toLowerCase()
-        );
-      }
-
-      if (existingIndex >= 0) {
-        // Update existing transaction
-        game.transactions[existingIndex].amount = amount;
-        if (userId) {
-          game.transactions[existingIndex].userId = new mongoose.Types.ObjectId(userId);
-          game.transactions[existingIndex].playerName = undefined;
-        } else if (playerName) {
-          game.transactions[existingIndex].playerName = playerName.trim();
-          game.transactions[existingIndex].userId = undefined;
-        }
-      } else {
-        // Add new transaction
-        const newTransaction: any = {
-          amount,
-          createdAt: new Date(),
-        };
-        if (userId) {
-          newTransaction.userId = new mongoose.Types.ObjectId(userId);
-        } else {
-          newTransaction.playerName = playerName.trim();
-        }
-        game.transactions.push(newTransaction);
-      }
+      game.date = undefined;
     }
-
-    // Validate zero-sum
-    const sum = game.transactions.reduce((acc, t) => acc + t.amount, 0);
-    if (Math.abs(sum) > 0.01) {
-      res.status(400).json({
-        error: 'Transactions must sum to zero',
-        currentSum: sum,
-      });
-      return;
-    }
-
+    
     await game.save();
     await game.populate('transactions.userId', 'username displayName');
     await game.populate('createdByUserId', 'username displayName');
     await game.populate('groupId', 'name');
 
-    // Emit real-time update
     emitGameUpdate(token, game.toJSON());
-
     res.json(game);
   } catch (error) {
-    console.error('Add/update public transaction error:', error);
+    console.error('Update game date error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Delete transaction via public link
-router.delete('/public/:token/transactions', async (req: Request, res: Response) => {
+// Update a single field in a transaction (collaborative editing)
+router.patch('/public/:token/transaction/:rowId', async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
-    const { index } = req.query;
+    const { token, rowId } = req.params;
+    const { field, value } = req.body;
 
-    if (index === undefined) {
-      res.status(400).json({ error: 'index query parameter is required' });
-      return;
-    }
-
-    const transactionIndex = parseInt(index as string, 10);
-    if (isNaN(transactionIndex) || transactionIndex < 0) {
-      res.status(400).json({ error: 'Invalid transaction index' });
+    if (!field || !['playerName', 'amount'].includes(field)) {
+      res.status(400).json({ error: 'field must be "playerName" or "amount"' });
       return;
     }
 
@@ -301,24 +217,223 @@ router.delete('/public/:token/transactions', async (req: Request, res: Response)
       return;
     }
 
-    if (transactionIndex >= game.transactions.length) {
+    // Check if game is settled (read-only)
+    if (game.settled) {
+      res.status(403).json({ error: 'Game is settled and cannot be edited' });
+      return;
+    }
+
+    // Find transaction by rowId (we'll use index for simplicity)
+    const rowIndex = parseInt(rowId, 10);
+    if (isNaN(rowIndex) || rowIndex < 0) {
+      res.status(400).json({ error: 'Invalid row index' });
+      return;
+    }
+
+    // If row doesn't exist, create it (and any missing rows before it)
+    // Create empty transactions with placeholder to satisfy validation
+    while (game.transactions.length <= rowIndex) {
+      game.transactions.push({
+        playerName: '_', // Underscore placeholder to satisfy validation (will be updated below)
+        amount: 0,
+        createdAt: new Date(),
+      });
+    }
+
+    const transaction = game.transactions[rowIndex];
+
+    if (field === 'playerName') {
+      const trimmedValue = (value as string)?.trim() || '';
+        // Use trimmed value, or underscore if empty (to satisfy validation)
+        if (trimmedValue === '' && transaction.playerName && transaction.playerName !== '_') {
+          // User cleared a previously set value - keep it as underscore for validation
+          transaction.playerName = '_';
+        } else {
+          transaction.playerName = trimmedValue || '_';
+        }
+      // Always clear userId - we only use playerName now
+        transaction.userId = undefined;
+    } else if (field === 'amount') {
+      const numValue = parseFloat(value as string);
+      if (isNaN(numValue)) {
+        res.status(400).json({ error: 'amount must be a valid number' });
+        return;
+      }
+      transaction.amount = numValue;
+    }
+    
+    // Ensure transaction has playerName for validation
+    if (!transaction.playerName || transaction.playerName.trim() === '') {
+      transaction.playerName = '_'; // Fallback to underscore if somehow empty
+    }
+
+    await game.save();
+    await game.populate('transactions.userId', 'username displayName');
+    await game.populate('createdByUserId', 'username displayName');
+    await game.populate('groupId', 'name');
+
+    emitGameUpdate(token, game.toJSON());
+    res.json(game);
+  } catch (error) {
+    console.error('Update transaction field error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add new transaction row
+router.post('/public/:token/transaction', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { playerName, amount } = req.body;
+
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Check if game is settled (read-only)
+    if (game.settled) {
+      res.status(403).json({ error: 'Game is settled and cannot be edited' });
+      return;
+    }
+
+    // Create new transaction with placeholder to satisfy validation
+    // Use a non-empty placeholder that won't be trimmed (underscore works)
+    const trimmedPlayerName = playerName?.trim() || '';
+    const newTransaction: any = {
+      playerName: trimmedPlayerName || '_', // Underscore placeholder to satisfy validation (will be updated when user types)
+      amount: amount || 0,
+      createdAt: new Date(),
+    };
+
+    game.transactions.push(newTransaction);
+    await game.save();
+    await game.populate('transactions.userId', 'username displayName');
+    await game.populate('createdByUserId', 'username displayName');
+    await game.populate('groupId', 'name');
+
+    emitGameUpdate(token, game.toJSON());
+    res.json(game);
+  } catch (error) {
+    console.error('Add transaction error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete transaction row
+router.delete('/public/:token/transaction/:rowId', async (req: Request, res: Response) => {
+  try {
+    const { token, rowId } = req.params;
+
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Check if game is settled (read-only)
+    if (game.settled) {
+      res.status(403).json({ error: 'Game is settled and cannot be edited' });
+      return;
+    }
+
+    const rowIndex = parseInt(rowId, 10);
+    if (isNaN(rowIndex) || rowIndex < 0 || rowIndex >= game.transactions.length) {
       res.status(404).json({ error: 'Transaction not found' });
       return;
     }
 
-    game.transactions.splice(transactionIndex, 1);
-
+    game.transactions.splice(rowIndex, 1);
     await game.save();
     await game.populate('transactions.userId', 'username displayName');
     await game.populate('createdByUserId', 'username displayName');
     await game.populate('groupId', 'name');
 
-    // Emit real-time update
     emitGameUpdate(token, game.toJSON());
-
     res.json(game);
   } catch (error) {
-    console.error('Delete public transaction error:', error);
+    console.error('Delete transaction error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Settle game (make it read-only)
+router.post('/public/:token/settle', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Validate that no two transactions have the same player name (case-insensitive)
+    // Only check transactions that have a non-empty playerName (not placeholder)
+    const playerNames = game.transactions
+      .map(t => {
+        // Use playerName only (userId is kept for backward compatibility but not used)
+        const name = t.playerName || '';
+        return name.trim().toLowerCase();
+      })
+      .filter(name => name !== '' && name !== '_'); // Filter out empty and placeholder names
+
+    const uniqueNames = new Set(playerNames);
+    if (playerNames.length !== uniqueNames.size) {
+      // Find duplicates for better error message
+      const nameCounts = new Map<string, number>();
+      playerNames.forEach(name => {
+        nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
+      });
+      const duplicates = Array.from(nameCounts.entries())
+        .filter(([_, count]) => count > 1)
+        .map(([name, _]) => name);
+      
+      res.status(400).json({ 
+        error: 'Cannot settle game: duplicate player names found',
+        duplicates: duplicates
+      });
+      return;
+    }
+
+    // Set game as settled
+    game.settled = true;
+    await game.save();
+    await game.populate('transactions.userId', 'username displayName');
+    await game.populate('createdByUserId', 'username displayName');
+    await game.populate('groupId', 'name');
+
+    emitGameUpdate(token, game.toJSON());
+    res.json(game);
+  } catch (error) {
+    console.error('Settle game error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Edit game (unsettle - make it editable again)
+router.post('/public/:token/edit', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const game = await Game.findOne({ publicToken: token });
+    if (!game) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    // Unsettle the game
+    game.settled = false;
+    await game.save();
+    await game.populate('transactions.userId', 'username displayName');
+    await game.populate('createdByUserId', 'username displayName');
+    await game.populate('groupId', 'name');
+
+    emitGameUpdate(token, game.toJSON());
+    res.json(game);
+  } catch (error) {
+    console.error('Edit game error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -334,25 +449,21 @@ router.post('/public/:token/quick-signup', async (req: Request, res: Response) =
       return;
     }
 
-    // Check if game exists
     const game = await Game.findOne({ publicToken: token });
     if (!game) {
       res.status(404).json({ error: 'Game not found' });
       return;
     }
-
-    // Check if username already exists
+    
     const existingUser = await User.findOne({ username: username.toLowerCase() });
     if (existingUser) {
       res.status(400).json({ error: 'Username already exists' });
       return;
     }
 
-    // Hash password if provided, otherwise use a default
     const passwordToHash = password || crypto.randomBytes(16).toString('hex');
     const passwordHash = await bcrypt.hash(passwordToHash, 10);
 
-    // Create user
     const user = new User({
       username: username.toLowerCase(),
       displayName,
@@ -361,7 +472,6 @@ router.post('/public/:token/quick-signup', async (req: Request, res: Response) =
 
     await user.save();
 
-    // Auto-add user to the game's group
     const group = await Group.findById(game.groupId);
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
@@ -377,78 +487,15 @@ router.post('/public/:token/quick-signup', async (req: Request, res: Response) =
       await group.save();
     }
 
-    // Return user without password
-    const userResponse = {
+    res.status(201).json({
       _id: user._id,
       id: user._id,
       username: user.username,
       displayName: user.displayName,
       createdAt: user.createdAt,
-    };
-
-    res.status(201).json(userResponse);
-  } catch (error) {
-    console.error('Quick signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Add existing user to group (after login) - public route
-router.post('/public/:token/add-user-to-group', async (req: Request, res: Response) => {
-  try {
-    const { token } = req.params;
-    const { userId } = req.body;
-
-    if (!userId) {
-      res.status(400).json({ error: 'userId is required' });
-      return;
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      res.status(400).json({ error: 'Invalid user ID' });
-      return;
-    }
-
-    const game = await Game.findOne({ publicToken: token });
-    if (!game) {
-      res.status(404).json({ error: 'Game not found' });
-      return;
-    }
-
-    const group = await Group.findById(game.groupId);
-    if (!group) {
-      res.status(404).json({ error: 'Group not found' });
-      return;
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    // Check if user is already in group
-    const userIdStr = userId.toString();
-    const isMember = group.memberIds.some(
-      (memberId) => memberId.toString() === userIdStr
-    );
-
-    if (!isMember) {
-      group.memberIds.push(new mongoose.Types.ObjectId(userId));
-      await group.save();
-    }
-
-    res.json({
-      success: true,
-      user: {
-        _id: user._id,
-        id: user._id,
-        username: user.username,
-        displayName: user.displayName,
-      },
     });
   } catch (error) {
-    console.error('Add user to group error:', error);
+    console.error('Quick signup error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -458,7 +505,7 @@ router.post('/public/:token/add-user-to-group', async (req: Request, res: Respon
 // Create game
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, date, transactions, groupId } = req.body;
+    const { name, date, groupId } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
@@ -475,7 +522,6 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Verify group exists and user is a member
     const group = await Group.findById(groupId);
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
@@ -488,70 +534,36 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Validate zero-sum if transactions are provided
-    if (transactions && Array.isArray(transactions)) {
-      const sum = transactions.reduce((acc: number, t: { amount: number }) => acc + (t.amount || 0), 0);
-      if (Math.abs(sum) > 0.01) {
-        res.status(400).json({
-          error: 'Transactions must sum to zero',
-          currentSum: sum,
-        });
-        return;
-      }
-    }
-
-    // Retry logic for duplicate publicToken (extremely rare)
     let game;
     let attempts = 0;
     const maxAttempts = 3;
     
     while (attempts < maxAttempts) {
       try {
-        // Generate token upfront to ensure it's set
         const token = crypto.randomBytes(8).toString('base64url');
-        console.log('Generated token for new game:', token);
         
-        // Create game object
         game = new Game({
           name: name.trim(),
           date: date ? new Date(date) : undefined,
           createdByUserId: req.userId,
           groupId: new mongoose.Types.ObjectId(groupId),
-          transactions: transactions || [],
+          transactions: [],
         });
         
-        // Set publicToken as a property (not in constructor) to ensure Mongoose recognizes it
         game.publicToken = token;
-        console.log('Set publicToken on game object:', game.publicToken);
-
         await game.save();
-        console.log('Game saved. publicToken after save:', game.publicToken);
         
-        // Verify publicToken was set (should always be true now)
         if (!game.publicToken) {
-          console.error('ERROR: publicToken missing after save despite being set!');
           throw new Error('Failed to set publicToken');
         }
         
-        // Double-check by querying the database directly
-        const savedGame = await Game.findById(game._id).lean();
-        if (!savedGame || !(savedGame as any).publicToken) {
-          console.error('ERROR: publicToken not found in database after save!');
-          console.error('Saved game from DB keys:', savedGame ? Object.keys(savedGame) : 'null');
-          throw new Error('publicToken not persisted to database');
-        }
-        
-        console.log('Game saved successfully with publicToken:', game.publicToken);
-        console.log('Verified in database:', (savedGame as any).publicToken);
-        break; // Success, exit retry loop
+        break;
       } catch (saveError: any) {
-        // Check if it's a duplicate key error for publicToken
         if (saveError?.code === 11000 && saveError?.keyPattern?.publicToken && attempts < maxAttempts - 1) {
           attempts++;
-          console.warn(`Duplicate publicToken detected, retrying (attempt ${attempts}/${maxAttempts})`);
-          continue; // Retry with a new token (will be generated in next iteration)
+          continue;
         }
-        throw saveError; // Re-throw if not a duplicate key error or max attempts reached
+        throw saveError;
       }
     }
     
@@ -559,49 +571,18 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       throw new Error('Failed to create game after multiple attempts');
     }
 
-    // Get the game ID and publicToken before any operations
-    const gameId = game._id.toString();
-    const publicTokenFromGame = game.publicToken;
-    console.log('Before populate - gameId:', gameId, 'publicToken:', publicTokenFromGame);
-    
-    // Reload from database to get fresh copy with publicToken
-    const freshGame = await Game.findById(gameId).lean();
-    const publicTokenFromDB = freshGame ? (freshGame as any).publicToken : null;
-    console.log('From database - publicToken:', publicTokenFromDB);
-    
     await game.populate('transactions.userId', 'username displayName');
     await game.populate('createdByUserId', 'username displayName');
 
-    // Convert to plain object
     const gameObj = game.toObject();
-    
-    // Build response object, ensuring publicToken is included from multiple sources
     const gameResponse: any = {
       ...gameObj,
-      publicToken: publicTokenFromDB || publicTokenFromGame || game.publicToken || (gameObj as any).publicToken,
+      publicToken: game.publicToken,
     };
-    
-    // Final check - if still missing, something is very wrong
-    if (!gameResponse.publicToken) {
-      console.error('CRITICAL ERROR: publicToken is missing from all sources!');
-      console.error('game.publicToken:', game.publicToken);
-      console.error('gameObj.publicToken:', (gameObj as any).publicToken);
-      console.error('freshGame.publicToken:', publicTokenFromDB);
-      console.error('gameResponse keys:', Object.keys(gameResponse));
-      
-      // This should never happen, but if it does, return error
-      return res.status(500).json({ 
-        error: 'Failed to generate public token for game',
-        gameId: gameId 
-      });
-    }
 
-    console.log('SUCCESS: Final response includes publicToken:', gameResponse.publicToken);
-    
     res.status(201).json(gameResponse);
   } catch (error: any) {
     console.error('Create game error:', error);
-    // Return more specific error message
     const errorMessage = error?.message || 'Internal server error';
     const statusCode = error?.name === 'ValidationError' ? 400 : 500;
     res.status(statusCode).json({ 
@@ -616,7 +597,6 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { groupId } = req.query;
 
-    // Get all groups user belongs to
     const userGroups = await Group.find({
       memberIds: req.userId,
     }).select('_id');
@@ -625,7 +605,6 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
 
     let query: any = { groupId: { $in: groupIds } };
 
-    // If groupId is provided, filter by that group (and verify membership)
     if (groupId) {
       if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
         res.status(400).json({ error: 'Invalid group ID' });
@@ -680,7 +659,6 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Verify user is a member of the group
     const group = await Group.findById(game.groupId);
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
@@ -717,7 +695,6 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Verify user is a member of the group
     const group = await Group.findById(game.groupId);
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
@@ -732,7 +709,6 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Only allow creator to delete
     if (game.createdByUserId.toString() !== req.userId) {
       res.status(403).json({ error: 'Not authorized to delete this game' });
       return;
@@ -748,4 +724,3 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 });
 
 export default router;
-

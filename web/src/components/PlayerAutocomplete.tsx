@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import apiClient from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -52,11 +53,58 @@ const PlayerAutocomplete = ({
   const [loginLoading, setLoginLoading] = useState(false);
   const { login } = useAuth();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+  // Update dropdown position when scrolling or resizing
+  useEffect(() => {
+    const updatePosition = () => {
+      if (showDropdown && wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = 192; // max-h-48 = 12rem = 192px
+        
+        if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+          setDropdownPosition('top');
+          setDropdownStyle({
+            position: 'fixed',
+            top: `${rect.top - dropdownHeight - 4}px`,
+            left: `${rect.left}px`,
+            width: `${rect.width}px`,
+            zIndex: 1000,
+          });
+        } else {
+          setDropdownPosition('bottom');
+          setDropdownStyle({
+            position: 'fixed',
+            top: `${rect.bottom + 4}px`,
+            left: `${rect.left}px`,
+            width: `${rect.width}px`,
+            zIndex: 1000,
+          });
+        }
+      }
+    };
+
+    if (showDropdown) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [showDropdown]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node) &&
+          dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
     };
@@ -114,9 +162,11 @@ const PlayerAutocomplete = ({
   };
 
   const handleSelectUser = (user: User) => {
+    const userId = user._id || user.id;
     setSearchQuery(user.displayName);
     setShowDropdown(false);
-    onChange(user.displayName, user._id || user.id);
+    // Pass userId explicitly when user is selected
+    onChange(user.displayName, userId, user.displayName);
   };
 
   const handleCreateNewUser = () => {
@@ -225,6 +275,34 @@ const PlayerAutocomplete = ({
             onChange={handleInputChange}
             onFocus={() => {
               if (hasResults || showCreateOption) {
+                // Calculate dropdown position using fixed positioning relative to viewport
+                if (wrapperRef.current) {
+                  const rect = wrapperRef.current.getBoundingClientRect();
+                  const spaceBelow = window.innerHeight - rect.bottom;
+                  const spaceAbove = rect.top;
+                  const dropdownHeight = 192; // max-h-48 = 12rem = 192px
+                  
+                  // Position above if not enough space below AND more space above
+                  if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+                    setDropdownPosition('top');
+                    setDropdownStyle({
+                      position: 'fixed',
+                      top: `${rect.top - dropdownHeight - 4}px`,
+                      left: `${rect.left}px`,
+                      width: `${rect.width}px`,
+                      zIndex: 1000,
+                    });
+                  } else {
+                    setDropdownPosition('bottom');
+                    setDropdownStyle({
+                      position: 'fixed',
+                      top: `${rect.bottom + 4}px`,
+                      left: `${rect.left}px`,
+                      width: `${rect.width}px`,
+                      zIndex: 1000,
+                    });
+                  }
+                }
                 setShowDropdown(true);
               }
             }}
@@ -242,8 +320,12 @@ const PlayerAutocomplete = ({
           )}
         </div>
 
-        {showDropdown && (hasResults || showCreateOption) && (
-          <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-48 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none" style={{ maxHeight: '12rem' }}>
+        {showDropdown && (hasResults || showCreateOption) && createPortal(
+          <div 
+            ref={dropdownRef}
+            className="bg-white shadow-lg max-h-48 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none" 
+            style={{ ...dropdownStyle, maxHeight: '12rem' }}
+          >
             {loading && (
               <div className="px-4 py-2 text-sm text-gray-500">Searching...</div>
             )}
@@ -301,7 +383,8 @@ const PlayerAutocomplete = ({
                 </button>
               </>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 

@@ -15,6 +15,7 @@ export interface IGame extends Document {
   groupId: Types.ObjectId;
   transactions: ITransaction[];
   publicToken: string;
+  settled: boolean; // Whether the game has been settled (read-only)
   createdAt: Date;
 }
 
@@ -42,10 +43,13 @@ const TransactionSchema = new Schema<ITransaction>(
   { _id: true }
 );
 
-// Validate that either userId or playerName is set
+// Validate that playerName is set (allow placeholder '_' for temporary transactions)
+// userId is optional and kept for backward compatibility with legacy data
 TransactionSchema.pre('validate', function (next) {
-  if (!this.userId && !this.playerName) {
-    next(new Error('Either userId or playerName must be provided'));
+  const hasPlayerName = this.playerName && this.playerName.toString().trim() !== '';
+  
+  if (!hasPlayerName) {
+    next(new Error('playerName must be provided'));
   } else {
     next();
   }
@@ -81,6 +85,10 @@ const GameSchema = new Schema<IGame>(
       required: true,
       unique: true,
       index: true,
+    },
+    settled: {
+      type: Boolean,
+      default: false,
     },
     createdAt: {
       type: Date,

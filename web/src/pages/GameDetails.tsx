@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { gameDetailsCache } from './Dashboard';
-import { getBasePath } from '../utils/env';
 
 interface GameDetailsProps {
   gameId: string;
@@ -171,8 +170,8 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
               {hasPublicToken && game.publicToken && (
                 <button
                   onClick={() => {
-                    const basePath = getBasePath();
-                    navigate(`${basePath}games/public/${game.publicToken}`);
+                    // Use absolute path (/) so it's relative to the basename, not the current route
+                    navigate(`/games/public/${game.publicToken}`);
                   }}
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                 >

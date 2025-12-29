@@ -1,61 +1,38 @@
 // Utility to safely access import.meta.env in both Vite and Jest
 // In production builds, Vite will replace import.meta.env at build time
-// In Jest, we check for test environment and return defaults
+// In Jest, this file will be mocked
+
+// This conditional compilation approach ensures Jest doesn't parse import.meta
+// while still allowing Vite to perform static replacement
+const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
 /**
  * Get BASE_URL from import.meta.env
  */
 export function getBasePath(): string {
-  // In test environment, return default value
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+  if (isTest) {
     return '/';
   }
-  
-  // Use eval to prevent Jest from parsing import.meta at compile time
-  // In Vite, this will work normally
-  try {
-    // eslint-disable-next-line no-eval
-    return eval('import.meta.env.BASE_URL') || '/';
-  } catch {
-    return '/';
-  }
+  return import.meta.env.BASE_URL || '/';
 }
 
 /**
  * Get VITE_API_URL from import.meta.env
  */
 export function getApiUrl(): string | undefined {
-  // In test environment, return undefined
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+  if (isTest) {
     return undefined;
   }
-  
-  // Use eval to prevent Jest from parsing import.meta at compile time
-  // In Vite, this will work normally
-  try {
-    // eslint-disable-next-line no-eval
-    return eval('import.meta.env.VITE_API_URL');
-  } catch {
-    return undefined;
-  }
+  return import.meta.env.VITE_API_URL;
 }
 
 /**
  * Check if we're in development mode
  */
 export function isDev(): boolean {
-  // In test environment, return false
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+  if (isTest) {
     return false;
   }
-  
-  // Use eval to prevent Jest from parsing import.meta at compile time
-  // In Vite, this will work normally
-  try {
-    // eslint-disable-next-line no-eval
-    return eval('import.meta.env.DEV') === true;
-  } catch {
-    return false;
-  }
+  return import.meta.env.DEV === true;
 }
 

@@ -26,6 +26,9 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    // Mock env.ts to avoid import.meta issues in tests
+    '^@/utils/env$': '<rootDir>/src/utils/__mocks__/env.ts',
+    '^.*/utils/env$': '<rootDir>/src/utils/__mocks__/env.ts',
   },
   testTimeout: 5000,
 };

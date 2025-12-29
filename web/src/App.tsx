@@ -7,6 +7,7 @@ import Groups from './pages/Groups';
 import GroupDetails from './pages/GroupDetails';
 import PublicGameEntry from './pages/PublicGameEntry';
 import Layout from './components/Layout';
+import { getBasePath } from './utils/env';
 
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, loading } = useAuth();
@@ -47,7 +48,7 @@ const AppRoutes = () => {
 function App() {
   // Get base path from Vite's base config (for GitHub Pages)
   // In production, this will be '/zeroSum/' or '/' depending on deployment
-  const basePath = import.meta.env.BASE_URL || '/';
+  const basePath = getBasePath();
   
   return (
     <Router basename={basePath}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+import { getBasePath } from '../utils/env';
 
 interface CreateGameProps {
   groupId: string;
@@ -49,7 +50,7 @@ const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
       
       // Close the modal and navigate to the public game page
       onClose();
-      const basePath = import.meta.env.BASE_URL || '/';
+      const basePath = getBasePath();
       navigate(`${basePath}games/public/${response.data.publicToken}`);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create game');

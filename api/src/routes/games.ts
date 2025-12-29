@@ -505,7 +505,7 @@ router.post('/public/:token/quick-signup', async (req: Request, res: Response) =
 // Create game
 router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, date, groupId } = req.body;
+    const { name, date, groupId, transactions } = req.body;
 
     if (!name) {
       res.status(400).json({ error: 'Name is required' });
@@ -534,6 +534,18 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Validate zero-sum if transactions are provided
+    if (transactions && Array.isArray(transactions)) {
+      const sum = transactions.reduce((acc: number, t: { amount: number }) => acc + (t.amount || 0), 0);
+      if (Math.abs(sum) > 0.01) {
+        res.status(400).json({
+          error: 'Transactions must sum to zero',
+          currentSum: sum,
+        });
+        return;
+      }
+    }
+
     let game;
     let attempts = 0;
     const maxAttempts = 3;
@@ -542,12 +554,22 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       try {
         const token = crypto.randomBytes(8).toString('base64url');
         
+        // Process transactions if provided
+        const processedTransactions = transactions && Array.isArray(transactions)
+          ? transactions.map((t: { userId?: string; playerName?: string; amount: number }) => ({
+              userId: t.userId ? new mongoose.Types.ObjectId(t.userId) : undefined,
+              playerName: t.playerName || '_', // Use placeholder if not provided (required by validation)
+              amount: t.amount,
+              createdAt: new Date(),
+            }))
+          : [];
+        
         game = new Game({
           name: name.trim(),
           date: date ? new Date(date) : undefined,
           createdByUserId: req.userId,
           groupId: new mongoose.Types.ObjectId(groupId),
-          transactions: [],
+          transactions: processedTransactions,
         });
         
         game.publicToken = token;

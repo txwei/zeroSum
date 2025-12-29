@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import apiClient from '../api/client';
+import { getBasePath, getApiUrl, isDev } from '../utils/env';
 
 interface Game {
   _id: string;
@@ -83,11 +84,11 @@ const PublicGameEntry = () => {
     }
 
     let finalSocketUrl: string;
-    const viteApiUrl = import.meta.env.VITE_API_URL;
+    const viteApiUrl = getApiUrl();
     
     if (viteApiUrl) {
       finalSocketUrl = viteApiUrl.replace(/\/api\/?$/, '');
-    } else if (import.meta.env.DEV) {
+    } else if (isDev()) {
       finalSocketUrl = 'http://localhost:5001';
     } else {
       finalSocketUrl = window.location.origin;
@@ -799,7 +800,7 @@ const PublicGameEntry = () => {
                   </h1>
                   <button
                     onClick={() => {
-                      const publicLink = `${window.location.origin}${import.meta.env.BASE_URL || '/'}games/public/${token}`;
+                      const publicLink = `${window.location.origin}${getBasePath()}games/public/${token}`;
                       navigator.clipboard.writeText(publicLink).then(() => {
                         setShowCopiedMessage(true);
                         setTimeout(() => setShowCopiedMessage(false), 2000);

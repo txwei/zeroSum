@@ -326,11 +326,12 @@ router.get('/trends', authenticate, async (req: AuthRequest, res: Response) => {
       // Find or create data point for this date
       let dataPoint = dataPoints.find((dp) => dp.date === dateKey);
       if (!dataPoint) {
-        dataPoint = { date: dateKey };
+        const newDataPoint: DataPoint = { date: dateKey };
         allPlayerIds.forEach((id) => {
-          dataPoint[id] = playerBalances[id];
+          newDataPoint[id] = playerBalances[id];
         });
-        dataPoints.push(dataPoint);
+        dataPoints.push(newDataPoint);
+        dataPoint = newDataPoint;
       }
 
       // Process transactions for this game

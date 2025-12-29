@@ -35,8 +35,8 @@ describe('Transaction Routes', () => {
         .set('Authorization', user1Token)
         .send({
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -100 },
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -100 },
           ],
         });
 
@@ -52,8 +52,8 @@ describe('Transaction Routes', () => {
         .set('Authorization', user1Token)
         .send({
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -50 }, // Doesn't sum to zero
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -50 }, // Doesn't sum to zero
           ],
         });
 
@@ -70,8 +70,8 @@ describe('Transaction Routes', () => {
         .set('Authorization', user3Token)
         .send({
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -100 },
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -100 },
           ],
         });
 
@@ -87,8 +87,8 @@ describe('Transaction Routes', () => {
         .set('Authorization', user1Token)
         .send({
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -100 },
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -100 },
           ],
         });
 
@@ -126,8 +126,8 @@ describe('Transaction Routes', () => {
         .set('Authorization', user1Token)
         .send({
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -100 },
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -100 },
           ],
         });
 

@@ -29,14 +29,16 @@ describe('Game Model', () => {
       await expect(game.save()).rejects.toThrow();
     });
 
-    it('should fail when date is missing', async () => {
+    it('should allow game without date (optional field)', async () => {
       const game = new Game({
         name: 'Test Game',
         createdByUserId: user._id,
         groupId: group._id,
         transactions: [],
       });
-      await expect(game.save()).rejects.toThrow();
+      await game.save();
+      expect(game.name).toBe('Test Game');
+      expect(game.date).toBeUndefined();
     });
 
     it('should fail when createdByUserId is missing', async () => {
@@ -83,8 +85,8 @@ describe('Game Model', () => {
     it('should store transactions with userId and amount', async () => {
       const user2 = await createTestUser('user2', 'User 2');
       const transactions = [
-        { userId: user._id, amount: 100 },
-        { userId: user2._id, amount: -100 },
+        { userId: user._id, playerName: '_', amount: 100 },
+        { userId: user2._id, playerName: '_', amount: -100 },
       ];
       const game = await createTestGame(user._id, group._id, 'Test Game', new Date(), transactions);
       expect(game.transactions.length).toBe(2);

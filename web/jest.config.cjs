@@ -14,7 +14,13 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: {
+        target: 'ES2020',
+        module: 'commonjs',
+        jsx: 'react-jsx',
+      },
+    }],
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   moduleNameMapper: {
@@ -23,4 +29,3 @@ module.exports = {
   },
   testTimeout: 5000,
 };
-

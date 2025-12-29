@@ -100,8 +100,8 @@ const GameSchema = new Schema<IGame>(
   }
 );
 
-// Generate unique public token before saving
-GameSchema.pre('save', async function (next) {
+// Generate unique public token before validation (so it's available for required check)
+GameSchema.pre('validate', async function (next) {
   if (!this.publicToken) {
     // Generate a random token - collision probability is extremely low
     // If there's a duplicate, MongoDB unique index will catch it and we can retry at the application level

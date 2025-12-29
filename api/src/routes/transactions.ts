@@ -55,8 +55,9 @@ router.post('/games/:gameId/transactions', authenticate, async (req: AuthRequest
     }
 
     // Update transactions
-    game.transactions = transactions.map((t: { userId: string; amount: number }) => ({
+    game.transactions = transactions.map((t: { userId: string; amount: number; playerName?: string }) => ({
       userId: new mongoose.Types.ObjectId(t.userId),
+      playerName: t.playerName || '_', // Use placeholder if not provided (required by validation)
       amount: t.amount,
       createdAt: new Date(),
     }));

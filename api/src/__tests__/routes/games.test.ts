@@ -38,8 +38,8 @@ describe('Game Routes', () => {
           date: new Date().toISOString(),
           groupId: group._id.toString(),
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -100 },
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -100 },
           ],
         });
 
@@ -57,8 +57,8 @@ describe('Game Routes', () => {
           date: new Date().toISOString(),
           groupId: group._id.toString(),
           transactions: [
-            { userId: user1._id.toString(), amount: 100 },
-            { userId: user2._id.toString(), amount: -50 }, // Doesn't sum to zero
+            { userId: user1._id.toString(), playerName: '_', amount: 100 },
+            { userId: user2._id.toString(), playerName: '_', amount: -50 }, // Doesn't sum to zero
           ],
         });
 

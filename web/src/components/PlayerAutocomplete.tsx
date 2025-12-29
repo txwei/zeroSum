@@ -54,7 +54,6 @@ const PlayerAutocomplete = ({
   const { login } = useAuth();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [_dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   // Update dropdown position when scrolling or resizing
@@ -67,7 +66,6 @@ const PlayerAutocomplete = ({
         const dropdownHeight = 192; // max-h-48 = 12rem = 192px
         
         if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-          setDropdownPosition('top');
           setDropdownStyle({
             position: 'fixed',
             top: `${rect.top - dropdownHeight - 4}px`,
@@ -76,7 +74,6 @@ const PlayerAutocomplete = ({
             zIndex: 1000,
           });
         } else {
-          setDropdownPosition('bottom');
           setDropdownStyle({
             position: 'fixed',
             top: `${rect.bottom + 4}px`,
@@ -284,7 +281,6 @@ const PlayerAutocomplete = ({
                   
                   // Position above if not enough space below AND more space above
                   if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-                    setDropdownPosition('top');
                     setDropdownStyle({
                       position: 'fixed',
                       top: `${rect.top - dropdownHeight - 4}px`,
@@ -293,7 +289,6 @@ const PlayerAutocomplete = ({
                       zIndex: 1000,
                     });
                   } else {
-                    setDropdownPosition('bottom');
                     setDropdownStyle({
                       position: 'fixed',
                       top: `${rect.bottom + 4}px`,

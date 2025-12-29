@@ -2,17 +2,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Groups from '../../pages/Groups';
 import { AuthProvider } from '../../context/AuthContext';
-import { GroupProvider } from '../../context/GroupContext';
+import { GroupProvider, useGroup } from '../../context/GroupContext';
 import apiClient from '../../api/client';
 
 jest.mock('../../api/client');
 jest.mock('../../context/GroupContext', () => ({
   ...jest.requireActual('../../context/GroupContext'),
-  useGroup: () => ({
+  useGroup: jest.fn(() => ({
     groups: [],
+    selectedGroupId: null,
+    selectedGroup: null,
     loading: false,
+    fetchGroups: jest.fn(),
+    selectGroup: jest.fn(),
     refreshGroups: jest.fn(),
-  }),
+    groupDetailsCache: new Map(),
+    fetchGroupDetails: jest.fn(),
+    prefetchGroupDetails: jest.fn(),
+  })),
 }));
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -38,14 +45,33 @@ describe('Groups Page', () => {
 
   it('should render groups list', async () => {
     const mockGroups = [
-      { _id: '1', name: 'Group 1', memberIds: [], createdAt: new Date().toISOString() },
-      { _id: '2', name: 'Group 2', memberIds: [], createdAt: new Date().toISOString() },
+      { 
+        _id: '1', 
+        name: 'Group 1', 
+        memberIds: [], 
+        createdAt: new Date().toISOString(),
+        createdByUserId: { _id: 'user1', username: 'user1', displayName: 'User 1' },
+      },
+      { 
+        _id: '2', 
+        name: 'Group 2', 
+        memberIds: [], 
+        createdAt: new Date().toISOString(),
+        createdByUserId: { _id: 'user1', username: 'user1', displayName: 'User 1' },
+      },
     ];
     
-    jest.spyOn(require('../../context/GroupContext'), 'useGroup').mockReturnValue({
+    (useGroup as jest.Mock).mockReturnValue({
       groups: mockGroups,
+      selectedGroupId: null,
+      selectedGroup: null,
       loading: false,
+      fetchGroups: jest.fn(),
+      selectGroup: jest.fn(),
       refreshGroups: jest.fn(),
+      groupDetailsCache: new Map(),
+      fetchGroupDetails: jest.fn(),
+      prefetchGroupDetails: jest.fn(),
     });
 
     renderWithProviders(<Groups />);
@@ -58,10 +84,17 @@ describe('Groups Page', () => {
   });
 
   it('should show create group form when button is clicked', async () => {
-    jest.spyOn(require('../../context/GroupContext'), 'useGroup').mockReturnValue({
+    (useGroup as jest.Mock).mockReturnValue({
       groups: [],
+      selectedGroupId: null,
+      selectedGroup: null,
       loading: false,
+      fetchGroups: jest.fn(),
+      selectGroup: jest.fn(),
       refreshGroups: jest.fn(),
+      groupDetailsCache: new Map(),
+      fetchGroupDetails: jest.fn(),
+      prefetchGroupDetails: jest.fn(),
     });
 
     renderWithProviders(<Groups />);
@@ -76,10 +109,17 @@ describe('Groups Page', () => {
 
   it('should create a new group', async () => {
     const mockRefreshGroups = jest.fn();
-    jest.spyOn(require('../../context/GroupContext'), 'useGroup').mockReturnValue({
+    (useGroup as jest.Mock).mockReturnValue({
       groups: [],
+      selectedGroupId: null,
+      selectedGroup: null,
       loading: false,
+      fetchGroups: jest.fn(),
+      selectGroup: jest.fn(),
       refreshGroups: mockRefreshGroups,
+      groupDetailsCache: new Map(),
+      fetchGroupDetails: jest.fn(),
+      prefetchGroupDetails: jest.fn(),
     });
     
     (apiClient.post as jest.Mock).mockResolvedValue({

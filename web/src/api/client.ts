@@ -2,7 +2,6 @@ import axios from 'axios';
 
 // Handle import.meta.env for both Vite and Jest
 // In Jest, import.meta is not available, so we use a fallback
-// @ts-ignore - import.meta is available in Vite but not in Jest
 const getApiBaseUrl = () => {
   // Check for test mock first
   if ((globalThis as any).__VITE_API_URL__) {
@@ -12,7 +11,8 @@ const getApiBaseUrl = () => {
   // Check for Vite environment variable
   let viteApiUrl: string | undefined;
   try {
-    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - import.meta is available in Vite but not in Jest
     viteApiUrl = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_URL : undefined;
   } catch (e) {
     // import.meta not available (e.g., in Jest)

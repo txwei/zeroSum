@@ -124,7 +124,13 @@ const Dashboard = ({ groupId }: DashboardProps) => {
   }, [filterMyGames, games, user]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return 'No date';
+    // Dates are stored as UTC midnight, so use UTC methods to avoid timezone shifts
+    const date = new Date(dateString);
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
+    return new Date(year, month - 1, day).toLocaleDateString();
   };
 
   const formatCurrency = (amount: number) => {

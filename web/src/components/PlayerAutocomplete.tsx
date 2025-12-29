@@ -54,7 +54,7 @@ const PlayerAutocomplete = ({
   const { login } = useAuth();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const [_dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   // Update dropdown position when scrolling or resizing

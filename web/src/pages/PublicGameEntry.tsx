@@ -52,6 +52,7 @@ const PublicGameEntry = () => {
   const nameUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track pending saves
   const rowsRef = useRef<TransactionRow[]>([]); // Keep ref for beforeunload
+  const addingRowRef = useRef<boolean>(false); // Track if we're currently adding a row
 
   // Helper function to format date to YYYY-MM-DD
   // The date is stored as UTC midnight, so we need to extract the UTC date components
@@ -193,21 +194,33 @@ const PublicGameEntry = () => {
         setGameDate('');
       }
       // Update rows from server (this is the authoritative state)
-      const newRows: TransactionRow[] = updatedGame.transactions.map((t, idx) => {
-        // Use playerName only - hide placeholder underscore
-        const displayName = t.playerName && t.playerName !== '_' ? t.playerName : '';
-        return {
-          index: idx,
-          playerName: displayName,
-          amount: t.amount.toString(),
-        };
+      // But preserve any fields that are currently being edited to prevent flickering
+      setRows((currentRows) => {
+        const newRows: TransactionRow[] = updatedGame.transactions.map((t, idx) => {
+          // Use playerName only - hide placeholder underscore
+          const displayName = t.playerName && t.playerName !== '_' ? t.playerName : '';
+          
+          // If we're currently editing this field, keep the current value to prevent flicker
+          const playerNameKey = `${idx}-playerName`;
+          const amountKey = `${idx}-amount`;
+          const isEditingPlayerName = updatingFieldsRef.current.has(playerNameKey);
+          const isEditingAmount = updatingFieldsRef.current.has(amountKey);
+          
+          // Preserve current value if actively editing
+          const currentRow = currentRows[idx];
+          return {
+            index: idx,
+            playerName: isEditingPlayerName && currentRow ? currentRow.playerName : displayName,
+            amount: isEditingAmount && currentRow ? currentRow.amount : t.amount.toString(),
+          };
+        });
+        // Ensure at least one empty row
+        if (newRows.length === 0) {
+          newRows.push({ index: 0, playerName: '', amount: '' });
+        }
+        rowsRef.current = newRows;
+        return newRows;
       });
-      // Ensure at least one empty row
-      if (newRows.length === 0) {
-        newRows.push({ index: 0, playerName: '', amount: '' });
-      }
-      setRows(newRows);
-      rowsRef.current = newRows;
     });
 
     return () => {
@@ -238,23 +251,53 @@ const PublicGameEntry = () => {
       } else {
         setGameDate('');
       }
-      const newRows: TransactionRow[] = game.transactions.map((t, idx) => {
-        // Use playerName only - hide placeholder underscore
-        const displayName = t.playerName && t.playerName !== '_' ? t.playerName : '';
-        return {
-          index: idx,
-          playerName: displayName,
-          amount: t.amount.toString(),
-        };
+      // Update rows from game, but preserve any fields currently being edited
+      // Also preserve optimistic rows (rows that exist in state but not yet in game.transactions)
+      setRows((currentRows) => {
+        // If we're adding a row, preserve optimistic rows
+        if (addingRowRef.current && currentRows.length > game.transactions.length) {
+          // Don't update rows yet - wait for the server response
+          return currentRows;
+        }
+        
+        const newRows: TransactionRow[] = game.transactions.map((t, idx) => {
+          // Use playerName only - hide placeholder underscore
+          const displayName = t.playerName && t.playerName !== '_' ? t.playerName : '';
+          
+          // If we're currently editing this field, keep the current value to prevent flicker
+          const playerNameKey = `${idx}-playerName`;
+          const amountKey = `${idx}-amount`;
+          const isEditingPlayerName = updatingFieldsRef.current.has(playerNameKey);
+          const isEditingAmount = updatingFieldsRef.current.has(amountKey);
+          
+          // Preserve current value if actively editing
+          const currentRow = currentRows[idx];
+          return {
+            index: idx,
+            playerName: isEditingPlayerName && currentRow ? currentRow.playerName : displayName,
+            amount: isEditingAmount && currentRow ? currentRow.amount : t.amount.toString(),
+          };
+        });
+        
+        // Preserve optimistic rows (rows that exist in currentRows but not yet in game.transactions)
+        // This prevents flickering when adding a new row
+        if (currentRows.length > game.transactions.length) {
+          const optimisticRows = currentRows.slice(game.transactions.length);
+          newRows.push(...optimisticRows.map((row, idx) => ({
+            ...row,
+            index: game.transactions.length + idx,
+          })));
+        }
+        
+        // Ensure at least one empty row
+        if (newRows.length === 0) {
+          newRows.push({ index: 0, playerName: '', amount: '' });
+        }
+        rowsRef.current = newRows; // Keep ref in sync
+        return newRows;
       });
-      // Ensure at least one empty row
-      if (newRows.length === 0) {
-        newRows.push({ index: 0, playerName: '', amount: '' });
-      }
-      setRows(newRows);
-      rowsRef.current = newRows; // Keep ref in sync
     }
-  }, [game?._id]);
+  }, [game?._id, game?.transactions.length]);
 
   // Keep rowsRef in sync with rows state
   useEffect(() => {
@@ -313,7 +356,7 @@ const PublicGameEntry = () => {
       }
     };
 
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       // Use synchronous API to save (navigator.sendBeacon would be better but requires different endpoint)
       // For now, we'll rely on visibilitychange which is more reliable
       saveAllPending();
@@ -394,7 +437,8 @@ const PublicGameEntry = () => {
         try {
           const response = await apiClient.patch(`/games/public/${token}/transaction/${rowId}`, payload);
           // Update local state with server response to ensure sync
-          if (response.data) {
+          // But don't update if we're still editing this field (prevents flicker)
+          if (response.data && !updatingFieldsRef.current.has(fieldKey)) {
             setGame(response.data);
           }
         } catch (err: any) {
@@ -406,7 +450,8 @@ const PublicGameEntry = () => {
           setTimeout(() => {
             apiClient.patch(`/games/public/${token}/transaction/${rowId}`, payload)
               .then((retryResponse) => {
-                if (retryResponse.data) {
+                // Don't update if we're still editing this field (prevents flicker)
+                if (retryResponse.data && !updatingFieldsRef.current.has(fieldKey)) {
                   setGame(retryResponse.data);
                 }
               })
@@ -528,6 +573,7 @@ const PublicGameEntry = () => {
 
   const addRow = async () => {
     if (isSettled) return; // Don't allow edits when settled
+    addingRowRef.current = true;
     const newIndex = rows.length;
     const newRow: TransactionRow = { index: newIndex, playerName: '', amount: '' };
     
@@ -556,8 +602,10 @@ const PublicGameEntry = () => {
       if (response.data) {
         setGame(response.data);
       }
+      addingRowRef.current = false;
     } catch (err) {
       console.error('Failed to add row:', err);
+      addingRowRef.current = false;
       // Revert on error
       setRows((currentRows) => {
         const reverted = currentRows.slice(0, -1);

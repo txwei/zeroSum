@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { gameDetailsCache } from './Dashboard';
 
@@ -35,10 +36,10 @@ interface Game {
 }
 
 const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
+  const navigate = useNavigate();
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showShareLink, setShowShareLink] = useState(false);
 
   useEffect(() => {
     if (gameId) {
@@ -84,7 +85,13 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return 'No date';
+    // Dates are stored as UTC midnight, so use UTC methods to avoid timezone shifts
+    const date = new Date(dateString);
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
+    return new Date(year, month - 1, day).toLocaleDateString();
   };
 
   const formatCurrency = (amount: number) => {
@@ -94,25 +101,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
     }).format(amount);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      // Show brief success feedback
-      const button = document.getElementById('copy-share-button');
-      if (button) {
-        const originalText = button.textContent;
-        button.textContent = 'Copied!';
-        setTimeout(() => {
-          if (button) button.textContent = originalText;
-        }, 2000);
-      }
-    });
-  };
-
-  const publicLink = game?.publicToken
-    ? `${window.location.origin}${import.meta.env.BASE_URL || '/'}games/public/${game.publicToken}`
-    : '';
-
-  // Check if publicToken exists before showing share button
+  // Check if publicToken exists before showing edit button
   const hasPublicToken = Boolean(game?.publicToken);
 
   if (loading) {
@@ -178,12 +167,15 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
               </div>
             </div>
             <div className="flex space-x-2">
-              {hasPublicToken && (
+              {hasPublicToken && game.publicToken && (
                 <button
-                  onClick={() => setShowShareLink(!showShareLink)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  onClick={() => {
+                    const basePath = import.meta.env.BASE_URL || '/';
+                    navigate(`${basePath}games/public/${game.publicToken}`);
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                 >
-                  {showShareLink ? 'Hide Share Link' : 'Share Game'}
+                  Edit Game
                 </button>
               )}
               {!hasPublicToken && (
@@ -200,33 +192,6 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
             </div>
           </div>
         </div>
-
-        {showShareLink && hasPublicToken && game.publicToken && (
-          <div className="px-6 py-4 bg-blue-50 border-b border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Share this link with others:
-            </label>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                readOnly
-                value={publicLink}
-                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-white"
-              />
-              <button
-                id="copy-share-button"
-                type="button"
-                onClick={() => copyToClipboard(publicLink)}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Copy Link
-              </button>
-            </div>
-            <p className="mt-2 text-xs text-gray-600">
-              Anyone with this link can view the game and enter their transactions without logging in.
-            </p>
-          </div>
-        )}
 
         <div className="px-6 py-4">
           <div className="mb-4">

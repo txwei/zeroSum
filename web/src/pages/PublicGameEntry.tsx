@@ -50,7 +50,6 @@ const PublicGameEntry = () => {
 
   const socketRef = useRef<Socket | null>(null);
   const updatingFieldsRef = useRef<Set<string>>(new Set()); // Track fields being updated locally
-  const nameUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map()); // Track pending saves
   const rowsRef = useRef<TransactionRow[]>([]); // Keep ref for beforeunload
   const addingRowRef = useRef<boolean>(false); // Track if we're currently adding a row
@@ -174,27 +173,6 @@ const PublicGameEntry = () => {
       }
     });
 
-    // Listen for game name updates
-    socket.on('game-name-updated', ({ name }: { name: string }) => {
-      if (!editingName) {
-        setGameName(name);
-        setGame((currentGame) => currentGame ? { ...currentGame, name } : null);
-      }
-    });
-
-    // Listen for game date updates
-    socket.on('game-date-updated', ({ date }: { date?: string }) => {
-      if (!editingDate) {
-        if (date) {
-          const formattedDate = formatDateForInput(date);
-          setGameDate(formattedDate);
-        } else {
-          setGameDate('');
-        }
-        setGame((currentGame) => currentGame ? { ...currentGame, date } : null);
-      }
-    });
-
     // Listen for row add/delete
     socket.on('row-action-updated', ({ action, rowId }: { action: 'add' | 'delete'; rowId?: number }) => {
       if (action === 'add') {
@@ -211,14 +189,27 @@ const PublicGameEntry = () => {
     // Listen for full game updates (from server saves or initial join)
     // This is the source of truth - always update when received
     socket.on('game-updated', (updatedGame: Game) => {
+      // Only update rows if we're not actively adding or deleting a row locally
+      if (addingRowRef.current || deletingRowRef.current) {
+        return;
+      }
+      
       setGame(updatedGame);
-      setGameName(updatedGame.name);
-      // Update date using local timezone
-      if (updatedGame.date) {
-        const formattedDate = formatDateForInput(updatedGame.date);
-        setGameDate(formattedDate);
-      } else {
-        setGameDate('');
+      
+      // Only update gameName if not currently editing
+      if (!editingName) {
+        setGameName(updatedGame.name);
+      }
+      
+      // Only update gameDate if not currently editing
+      if (!editingDate) {
+        // Update date using local timezone
+        if (updatedGame.date) {
+          const formattedDate = formatDateForInput(updatedGame.date);
+          setGameDate(formattedDate);
+        } else {
+          setGameDate('');
+        }
       }
       // Update rows from server (this is the authoritative state)
       // But preserve any fields that are currently being edited to prevent flickering
@@ -259,27 +250,24 @@ const PublicGameEntry = () => {
         socket.disconnect();
         socketRef.current = null;
       }
-      if (nameUpdateTimeoutRef.current) {
-        clearTimeout(nameUpdateTimeoutRef.current);
-      }
-      if (dateUpdateTimeoutRef.current) {
-        clearTimeout(dateUpdateTimeoutRef.current);
-      }
-      if (dateSocketTimeoutRef.current) {
-        clearTimeout(dateSocketTimeoutRef.current);
-      }
     };
   }, [token, editingName, editingDate]);
 
   useEffect(() => {
     if (game) {
-      setGameName(game.name);
+      // Only update gameName if not currently editing to prevent input jumping
+      if (!editingName) {
+        setGameName(game.name);
+      }
       // Format date for input (YYYY-MM-DD) using local timezone
-      if (game.date) {
-        const formattedDate = formatDateForInput(game.date);
-        setGameDate(formattedDate);
-      } else {
-        setGameDate('');
+      // Only update gameDate if not currently editing
+      if (!editingDate) {
+        if (game.date) {
+          const formattedDate = formatDateForInput(game.date);
+          setGameDate(formattedDate);
+        } else {
+          setGameDate('');
+        }
       }
       // Update rows from game, but preserve any fields currently being edited
       // Also preserve optimistic rows (rows that exist in state but not yet in game.transactions)
@@ -327,7 +315,7 @@ const PublicGameEntry = () => {
         return newRows;
       });
     }
-  }, [game?._id, game?.transactions.length]);
+  }, [game?._id, game?.transactions.length, editingName, editingDate]);
 
   // Keep rowsRef in sync with rows state
   useEffect(() => {
@@ -530,25 +518,9 @@ const PublicGameEntry = () => {
     if (isSettled) return; // Don't allow edits when settled
     setGameName(newName);
 
-    // Broadcast immediately
-    if (socketRef.current && token) {
-      if (nameUpdateTimeoutRef.current) {
-        clearTimeout(nameUpdateTimeoutRef.current);
-      }
-      nameUpdateTimeoutRef.current = setTimeout(() => {
-        socketRef.current?.emit('game-name-update', {
-          gameToken: token,
-          name: newName,
-        });
-      }, 200);
-    }
-
-    // Save to server (with shorter debounce, or immediately if requested)
-    if (nameUpdateTimeoutRef.current) {
-      clearTimeout(nameUpdateTimeoutRef.current);
-    }
-    
-    const saveName = async () => {
+    // Only save to server when immediate (on blur or clicking Done)
+    // No real-time broadcasting - last save wins
+    if (immediate) {
       try {
         await apiClient.put(`/games/public/${token}/name`, { name: newName });
       } catch (err) {
@@ -560,41 +532,16 @@ const PublicGameEntry = () => {
           });
         }, 1000);
       }
-    };
-
-    if (immediate) {
-      saveName();
-    } else {
-      nameUpdateTimeoutRef.current = setTimeout(saveName, 300); // Reduced from 1000ms
     }
   };
-
-  const dateUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const dateSocketTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const updateGameDate = async (newDate: string, immediate = false) => {
     if (isSettled) return; // Don't allow edits when settled
     setGameDate(newDate);
 
-    // Broadcast immediately
-    if (socketRef.current && token) {
-      if (dateSocketTimeoutRef.current) {
-        clearTimeout(dateSocketTimeoutRef.current);
-      }
-      dateSocketTimeoutRef.current = setTimeout(() => {
-        socketRef.current?.emit('game-date-update', {
-          gameToken: token,
-          date: newDate || undefined,
-        });
-      }, 200);
-    }
-
-    // Save to server (with shorter debounce, or immediately if requested)
-    if (dateUpdateTimeoutRef.current) {
-      clearTimeout(dateUpdateTimeoutRef.current);
-    }
-    
-    const saveDate = async () => {
+    // Only save to server when immediate (on blur)
+    // No real-time broadcasting - last save wins
+    if (immediate) {
       try {
         await apiClient.put(`/games/public/${token}/date`, { date: newDate || null });
       } catch (err) {
@@ -606,12 +553,6 @@ const PublicGameEntry = () => {
           });
         }, 1000);
       }
-    };
-
-    if (immediate) {
-      saveDate();
-    } else {
-      dateUpdateTimeoutRef.current = setTimeout(saveDate, 300);
     }
   };
 
@@ -826,6 +767,13 @@ const PublicGameEntry = () => {
                   type="text"
                   value={gameName}
                   onChange={(e) => updateGameName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      updateGameName(gameName, true);
+                      setEditingName(false);
+                      e.preventDefault();
+                    }
+                  }}
                   onBlur={(e) => {
                     updateGameName(e.target.value, true);
                     setEditingName(false);
@@ -835,7 +783,10 @@ const PublicGameEntry = () => {
                   autoFocus
                 />
                 <button
-                  onClick={() => setEditingName(false)}
+                  onClick={() => {
+                    updateGameName(gameName, true);
+                    setEditingName(false);
+                  }}
                   className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   Done

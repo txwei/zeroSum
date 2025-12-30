@@ -57,6 +57,30 @@ const Stats = ({ groupId }: StatsProps) => {
     }
   }, [groupId, timePeriod]);
 
+  // Auto-select most winning and most losing players when totals change
+  useEffect(() => {
+    if (totals.length > 0 && selectedPlayers.length === 0) {
+      // Find the player with highest total (most winning)
+      const maxTotal = Math.max(...totals.map(t => t.total));
+      const mostWinning = totals.find(t => t.total === maxTotal);
+      
+      // Find the player with lowest total (most losing)
+      const minTotal = Math.min(...totals.map(t => t.total));
+      const mostLosing = totals.find(t => t.total === minTotal);
+      
+      // Select both (or just one if they're the same player)
+      const playersToSelect = new Set<string>();
+      if (mostWinning) playersToSelect.add(mostWinning.userId);
+      if (mostLosing && mostLosing.userId !== mostWinning?.userId) {
+        playersToSelect.add(mostLosing.userId);
+      }
+      
+      if (playersToSelect.size > 0) {
+        setSelectedPlayers(Array.from(playersToSelect));
+      }
+    }
+  }, [totals]);
+
   useEffect(() => {
     if (groupId && selectedPlayers.length > 0) {
       fetchTrendData();

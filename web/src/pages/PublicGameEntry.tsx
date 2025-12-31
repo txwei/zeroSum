@@ -1069,13 +1069,22 @@ const PublicGameEntry = () => {
                                   if (activeElement && activeElement.closest('.math-keyboard')) {
                                     return;
                                   }
+                                  // Double check if keyboard should still be open for this row
+                                  if (showKeyboard && activeInputRowIndex === row.index) {
+                                    // If keyboard is still supposed to be open, refocus the input
+                                    const input = amountInputRefs.current.get(row.index);
+                                    if (input) {
+                                      input.focus();
+                                    }
+                                    return;
+                                  }
                                   setShowKeyboard(false);
                                   setActiveInputRowIndex(null);
                                   
                                   // Save value on blur (don't auto-evaluate)
                                   const value = e.target.value;
                                   updateField(row.index, 'amount', value, true);
-                                }, 200);
+                                }, 300);
                               }}
                               placeholder="0.00 or (102 - 58)"
                               className="w-full pl-8 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"

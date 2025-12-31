@@ -31,7 +31,11 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
     };
   }, [onClose, inputRef]);
 
-  const handleKeyPress = (key: string) => {
+  const handleKeyPress = (key: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (inputRef.current) {
       const input = inputRef.current;
       const start = input.selectionStart || 0;
@@ -49,7 +53,11 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
     }
   };
 
-  const handleBackspace = () => {
+  const handleBackspace = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (inputRef.current) {
       const input = inputRef.current;
       const start = input.selectionStart || 0;
@@ -79,7 +87,11 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
     }
   };
 
-  const handleFlipSign = () => {
+  const handleFlipSign = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (inputRef.current) {
       const input = inputRef.current;
       const start = input.selectionStart || 0;
@@ -113,7 +125,11 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
     }
   };
 
-  const handleClear = () => {
+  const handleClear = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     onChange('');
     setTimeout(() => {
       if (inputRef.current) {
@@ -122,7 +138,11 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
     }, 0);
   };
 
-  const handleEquals = () => {
+  const handleEquals = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (onEvaluate && value.trim()) {
       onEvaluate(value);
     }
@@ -132,161 +152,189 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
     <div
       ref={keyboardRef}
       className="math-keyboard fixed bottom-0 left-0 right-0 bg-black z-50 sm:hidden"
-      style={{ maxHeight: '50vh' }}
+      style={{ maxHeight: '35vh' }}
+      onMouseDown={(e) => e.preventDefault()}
+      onTouchStart={(e) => e.preventDefault()}
     >
-      <div className="p-1.5 space-y-1.5">
+      <div className="p-1 space-y-1">
         {/* First row: Parentheses and operators */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-1">
           <button
-            onClick={() => handleKeyPress('(')}
-            className="px-3 py-4 text-xl font-light bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('(', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-lg font-light bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             (
           </button>
           <button
-            onClick={() => handleKeyPress(')')}
-            className="px-3 py-4 text-xl font-light bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress(')', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-lg font-light bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             )
           </button>
           <button
-            onClick={handleClear}
-            className="px-3 py-4 text-lg font-medium bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleClear(e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-base font-medium bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             C
           </button>
           <button
-            onClick={handleBackspace}
-            className="px-3 py-4 text-xl font-light bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleBackspace(e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-lg font-light bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             ⌫
           </button>
         </div>
         
         {/* Second row: 7, 8, 9, ÷ */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-1">
           <button
-            onClick={() => handleKeyPress('7')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('7', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             7
           </button>
           <button
-            onClick={() => handleKeyPress('8')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('8', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             8
           </button>
           <button
-            onClick={() => handleKeyPress('9')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('9', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             9
           </button>
           <button
-            onClick={() => handleKeyPress('/')}
-            className="px-3 py-4 text-2xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('/', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             ÷
           </button>
         </div>
         
         {/* Third row: 4, 5, 6, × */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-1">
           <button
-            onClick={() => handleKeyPress('4')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('4', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             4
           </button>
           <button
-            onClick={() => handleKeyPress('5')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('5', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             5
           </button>
           <button
-            onClick={() => handleKeyPress('6')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('6', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             6
           </button>
           <button
-            onClick={() => handleKeyPress('*')}
-            className="px-3 py-4 text-2xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('*', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             ×
           </button>
         </div>
         
         {/* Fourth row: 1, 2, 3, - */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-1">
           <button
-            onClick={() => handleKeyPress('1')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('1', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             1
           </button>
           <button
-            onClick={() => handleKeyPress('2')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('2', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             2
           </button>
           <button
-            onClick={() => handleKeyPress('3')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('3', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             3
           </button>
           <button
-            onClick={() => handleKeyPress('-')}
-            className="px-3 py-4 text-2xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('-', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             −
           </button>
         </div>
         
         {/* Fifth row: 0, ., ±, + */}
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-1">
           <button
-            onClick={() => handleKeyPress('0')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('0', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             0
           </button>
           <button
-            onClick={() => handleKeyPress('.')}
-            className="px-3 py-4 text-2xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('.', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
           >
             .
           </button>
           <button
-            onClick={handleFlipSign}
-            className="px-3 py-4 text-xl font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-xl transition-colors"
+            onClick={(e) => handleFlipSign(e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-lg font-light bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white rounded-lg transition-colors touch-manipulation"
             title="Flip sign"
           >
             ±
           </button>
           <button
-            onClick={() => handleKeyPress('+')}
-            className="px-3 py-4 text-2xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleKeyPress('+', e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-light bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             +
           </button>
         </div>
         
         {/* Sixth row: Equals and Done */}
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1">
           <button
-            onClick={handleEquals}
-            className="px-3 py-4 text-2xl font-medium bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-xl transition-colors"
+            onClick={(e) => handleEquals(e)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-xl font-medium bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             =
           </button>
           <button
-            onClick={onClose}
-            className="px-3 py-4 text-lg font-medium bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-xl transition-colors"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+            className="px-2 py-2 text-base font-medium bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-white rounded-lg transition-colors touch-manipulation"
           >
             Done
           </button>

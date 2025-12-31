@@ -59,9 +59,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear auth data on 401, but don't automatically redirect
+      // Let components handle the error and decide whether to redirect
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Dispatch custom event to notify AuthContext to update state
+      window.dispatchEvent(new Event('auth-cleared'));
     }
     return Promise.reject(error);
   }

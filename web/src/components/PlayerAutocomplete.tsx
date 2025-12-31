@@ -270,6 +270,9 @@ const PlayerAutocomplete = ({
             type="text"
             value={searchQuery}
             onChange={handleInputChange}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
             onFocus={() => {
               if (hasResults || showCreateOption) {
                 // Calculate dropdown position using fixed positioning relative to viewport

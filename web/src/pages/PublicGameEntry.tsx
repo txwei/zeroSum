@@ -936,6 +936,9 @@ const PublicGameEntry = () => {
                             onChange={(e) => updateField(row.index, 'playerName', e.target.value)}
                             onBlur={(e) => updateField(row.index, 'playerName', e.target.value, true)}
                             placeholder="Enter player name..."
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck="false"
                             className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                           />
                         )}
@@ -954,6 +957,7 @@ const PublicGameEntry = () => {
                               type="text"
                               value={row.amount}
                               onChange={(e) => updateField(row.index, 'amount', e.target.value)}
+                              inputMode="decimal"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   // Evaluate formula on Enter

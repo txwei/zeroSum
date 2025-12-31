@@ -143,7 +143,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Fetch groups even if not logged in (to show public groups)
-    fetchGroups();
+      fetchGroups();
   }, [user]);
 
   const prefetchAllData = (groupsToPrefetch: Group[]) => {

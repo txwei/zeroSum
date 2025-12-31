@@ -14,6 +14,7 @@ interface Game {
   name: string;
   date: string;
   publicToken?: string;
+  settled?: boolean;
   createdByUserId: {
     _id: string;
     username: string;
@@ -130,6 +131,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
   }
 
   const sum = game.transactions.reduce((acc, t) => acc + t.amount, 0);
+  const isSettled = game.settled || false;
   const isValid = Math.abs(sum) < 0.01;
 
   return (
@@ -197,10 +199,10 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
           <div className="mb-4">
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                isSettled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
               }`}
             >
-              {isValid ? '✓ Valid (sum equals zero)' : `Invalid (sum: ${formatCurrency(sum)})`}
+              {isSettled ? '✓ Settled' : 'Unsettled'}
             </span>
           </div>
 

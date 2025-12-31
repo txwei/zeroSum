@@ -43,14 +43,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Check for stored auth data
+    const loadAuthData = () => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+      } else {
+        setToken(null);
+        setUser(null);
     }
+    };
+
+    loadAuthData();
     setLoading(false);
+
+    // Listen for auth cleared event (dispatched by API client interceptor on 401)
+    const handleAuthCleared = () => {
+      setToken(null);
+      setUser(null);
+    };
+
+    window.addEventListener('auth-cleared', handleAuthCleared);
+    return () => window.removeEventListener('auth-cleared', handleAuthCleared);
   }, []);
 
   const login = async (username: string, password: string) => {

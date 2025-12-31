@@ -147,6 +147,7 @@ const TransactionInput: React.FC<TransactionInputProps> = ({
                           <input
                             type="number"
                             step="0.01"
+                            inputMode="decimal"
                             value={amounts[userId] || ''}
                             onChange={(e) => handleAmountChange(userId, e.target.value)}
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"

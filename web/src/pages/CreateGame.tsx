@@ -71,7 +71,11 @@ const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
       // Use absolute path (/) so it's relative to the basename, not the current route
       navigate(`/games/public/${response.data.publicToken}`);
     } catch (err: any) {
+      if (err.response?.status === 401) {
+        setError('You must be logged in to create a game. Please log in and try again.');
+      } else {
       setError(err.response?.data?.error || 'Failed to create game');
+      }
       setLoading(false);
     }
   };

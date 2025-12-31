@@ -165,17 +165,17 @@ router.get('/:id', async (req: Request, res: Response) => {
       };
       const userId = decoded.userId;
 
-      // Check if user is a member (before populating, so memberIds are ObjectIds)
-      if (!isGroupMember(group, userId)) {
-        res.status(403).json({ error: 'Not a member of this group' });
-        return;
-      }
+    // Check if user is a member (before populating, so memberIds are ObjectIds)
+    if (!isGroupMember(group, userId)) {
+      res.status(403).json({ error: 'Not a member of this group' });
+      return;
+    }
 
-      // Populate after checking membership
-      await group.populate('createdByUserId', 'username displayName');
-      await group.populate('memberIds', 'username displayName');
+    // Populate after checking membership
+    await group.populate('createdByUserId', 'username displayName');
+    await group.populate('memberIds', 'username displayName');
 
-      res.json(group);
+    res.json(group);
     } catch (error) {
       res.status(401).json({ error: 'Invalid token' });
     }

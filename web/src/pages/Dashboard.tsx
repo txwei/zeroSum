@@ -9,6 +9,7 @@ interface Game {
   _id: string;
   name: string;
   date: string;
+  settled?: boolean;
   createdByUserId: {
     _id: string;
     username: string;
@@ -256,7 +257,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <ul className="divide-y divide-gray-200">
             {filteredGames.map((game) => {
-              const sum = game.transactions.reduce((acc, t) => acc + t.amount, 0);
+              const isSettled = game.settled || false;
               return (
                 <li key={game._id}>
                       <button
@@ -272,12 +273,12 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                           </p>
                           <span
                             className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              Math.abs(sum) < 0.01
+                              isSettled
                                 ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
                             }`}
                           >
-                            {Math.abs(sum) < 0.01 ? 'Valid' : `Sum: ${formatCurrency(sum)}`}
+                            {isSettled ? 'Settled' : 'Unsettled'}
                           </span>
                         </div>
                         <div className="mt-2 flex items-center text-sm text-gray-500">

@@ -662,13 +662,13 @@ router.get('/', async (req: Request, res: Response) => {
           res.status(401).json({ error: 'Authentication required for private groups' });
           return;
         }
-        const isMember = group.memberIds.some(
+      const isMember = group.memberIds.some(
           (memberId) => memberId.toString() === userId
-        );
-        if (!isMember) {
-          res.status(403).json({ error: 'Not a member of this group' });
-          return;
-        }
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
+        return;
+      }
       }
 
       // Allow access to this group's games

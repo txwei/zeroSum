@@ -46,6 +46,7 @@ const GroupDetails = () => {
   const [groupDescription, setGroupDescription] = useState('');
   const [updating, setUpdating] = useState(false);
   const [showManage, setShowManage] = useState(false);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
   useEffect(() => {
     if (groupId) {
@@ -152,6 +153,25 @@ const GroupDetails = () => {
       setError(err.response?.data?.error || 'Failed to update group');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleToggleVisibility = async () => {
+    if (!isAdmin || !group) return;
+    
+    setUpdatingVisibility(true);
+    setError('');
+
+    try {
+      const response = await apiClient.patch(`/groups/${groupId}`, {
+        isPublic: !group.isPublic,
+      });
+      setGroup(response.data);
+      await refreshGroups();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update group visibility');
+    } finally {
+      setUpdatingVisibility(false);
     }
   };
 
@@ -273,14 +293,14 @@ const GroupDetails = () => {
             </div>
           </div>
           {user && (
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowManage(!showManage)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                {showManage ? 'Hide' : 'Manage'}
-              </button>
-            </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowManage(!showManage)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
+            >
+              {showManage ? 'Hide' : 'Manage'}
+            </button>
+          </div>
           )}
         </div>
 
@@ -324,6 +344,49 @@ const GroupDetails = () => {
           
           {group.description && !editingName && (
             <p className="text-sm text-gray-600 mb-4">{group.description}</p>
+          )}
+
+          {/* Group Visibility Toggle - Only visible to admin */}
+          {isAdmin && (
+            <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Group Visibility</h3>
+                  <p className="text-xs text-gray-500">
+                    {group.isPublic 
+                      ? 'This group is public. Anyone can view it and its games.' 
+                      : 'This group is private. Only members can view it and its games.'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleVisibility}
+                  disabled={updatingVisibility}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    group.isPublic ? 'bg-green-600' : 'bg-gray-200'
+                  } ${updatingVisibility ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  role="switch"
+                  aria-checked={group.isPublic}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      group.isPublic ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="mt-2 flex items-center space-x-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  group.isPublic 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {group.isPublic ? 'Public' : 'Private'}
+                </span>
+                {updatingVisibility && (
+                  <span className="text-xs text-gray-500">Updating...</span>
+                )}
+              </div>
+            </div>
           )}
 
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

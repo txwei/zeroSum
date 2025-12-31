@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zero-Sum Game Tracker</title>
+    <script>
+      // Handle GitHub Pages redirect pattern
+      // If URL contains ?/, extract the path and redirect
+      if (window.location.search.includes('?/')) {
+        const path = window.location.search.replace('?/', '').replace(/~and~/g, '&');
+        window.history.replaceState({}, '', path);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -6,6 +6,18 @@ import { GroupProvider, useGroup } from '../../context/GroupContext';
 import apiClient from '../../api/client';
 
 jest.mock('../../api/client');
+jest.mock('../../context/AuthContext', () => ({
+  ...jest.requireActual('../../context/AuthContext'),
+  useAuth: () => ({
+    user: { id: '1', username: 'testuser', displayName: 'Test User' },
+    token: 'mock-token',
+    login: jest.fn(),
+    register: jest.fn(),
+    updateDisplayName: jest.fn(),
+    logout: jest.fn(),
+    loading: false,
+  }),
+}));
 jest.mock('../../context/GroupContext', () => ({
   ...jest.requireActual('../../context/GroupContext'),
   useGroup: jest.fn(() => ({

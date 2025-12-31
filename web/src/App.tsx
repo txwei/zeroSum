@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GroupProvider } from './context/GroupContext';
 import Login from './pages/Login';
@@ -9,8 +9,8 @@ import PublicGameEntry from './pages/PublicGameEntry';
 import Layout from './components/Layout';
 import { getBasePath } from './utils/env';
 
-const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
-  const { user, loading } = useAuth();
+const AppRoutes = () => {
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -20,23 +20,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
     );
   }
 
-  return user ? children : <Navigate to="/login" replace />;
-};
-
-const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/games/public/:token" element={<PublicGameEntry />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/" element={<Layout />}>
         <Route index element={<Groups />} />
         <Route path="groups" element={<Groups />} />
         <Route path="groups/:groupId" element={<GroupDetails />} />

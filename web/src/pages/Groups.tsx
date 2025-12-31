@@ -3,15 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
 import { useGroup } from '../context/GroupContext';
 import { GroupCardSkeleton } from '../components/SkeletonLoader';
+import { useAuth } from '../context/AuthContext';
 
 const Groups = () => {
   const { groups, loading, refreshGroups, prefetchGroupDetails } = useGroup();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+
+  const handleCreateGroupClick = () => {
+    if (!user) {
+      alert('Please login to create a new group.');
+      return;
+    }
+    setShowCreateForm(!showCreateForm);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +68,7 @@ const Groups = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Groups</h1>
         <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
+          onClick={handleCreateGroupClick}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
         >
           {showCreateForm ? 'Cancel' : 'Create Group'}
@@ -132,7 +142,7 @@ const Groups = () => {
         <div className="bg-white shadow rounded-lg p-6 text-center">
           <p className="text-gray-600 mb-4">No groups yet. Create your first group!</p>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={handleCreateGroupClick}
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
           >
             Create Group

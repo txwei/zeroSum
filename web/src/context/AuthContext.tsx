@@ -12,6 +12,7 @@ interface AuthContextType {
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, displayName: string, password: string) => Promise<void>;
+  updateDisplayName: (displayName: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -24,6 +25,11 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// Optional version that doesn't throw error, for components that can work without auth
+export const useOptionalAuth = () => {
+  return useContext(AuthContext);
 };
 
 interface AuthProviderProps {
@@ -79,6 +85,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateDisplayName = async (displayName: string) => {
+    try {
+      const response = await apiClient.patch('/users/me', { displayName });
+      const updatedUser = response.data;
+      
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Failed to update display name');
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -87,7 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, register, updateDisplayName, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -128,3 +128,6 @@ delete (window as any).location;
   replace: jest.fn(),
 };
 
+// Mock window.alert (jsdom doesn't implement it)
+window.alert = jest.fn();
+

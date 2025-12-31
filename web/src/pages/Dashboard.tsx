@@ -49,6 +49,14 @@ const Dashboard = ({ groupId }: DashboardProps) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
+  const handleCreateGameClick = () => {
+    if (!user) {
+      alert('Please login to create a new game.');
+      return;
+    }
+    setShowCreateForm(true);
+  };
+
   // Prefetch game details on hover (with debounce to avoid too many requests)
   const prefetchGame = (() => {
     let timeoutId: NodeJS.Timeout | null = null;
@@ -92,7 +100,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
       // 'n' or 'c' to create new game (when no modal is open)
       else if ((e.key === 'n' || e.key === 'c') && !selectedGameId && !showCreateForm) {
         e.preventDefault();
-        setShowCreateForm(true);
+        handleCreateGameClick();
       }
       // 'm' to toggle "My Games" filter
       else if (e.key === 'm' && !selectedGameId && !showCreateForm) {
@@ -141,8 +149,8 @@ const Dashboard = ({ groupId }: DashboardProps) => {
     if (filterMyGames && user) {
       const myGames = games.filter((game) =>
         game.transactions.some((t) => {
-          const userId = t.userId?._id || t.userId;
-          return userId?.toString() === user.id;
+          // Match by displayName in userId or playerName
+          return t.userId?.displayName === user.displayName || t.playerName === user.displayName;
         })
       );
       setFilteredGames(myGames);
@@ -216,7 +224,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
             <span>Close</span>
           </div>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={handleCreateGameClick}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
           >
             Create New Game
@@ -237,7 +245,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
           </p>
           {!filterMyGames && (
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={handleCreateGameClick}
             className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
           >
             Create Game

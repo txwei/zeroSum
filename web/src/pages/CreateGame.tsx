@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 interface CreateGameProps {
   groupId: string;
@@ -9,11 +10,29 @@ interface CreateGameProps {
 
 const CreateGame = ({ groupId, onClose }: CreateGameProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Default to today
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Check if user is logged in
+  if (!user) {
+    return (
+      <div className="px-4 sm:px-0">
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-4">
+          <p className="font-medium mb-2">Login Required</p>
+          <p className="text-sm mb-4">You need to be logged in to create a new game.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

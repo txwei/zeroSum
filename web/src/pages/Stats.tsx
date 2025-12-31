@@ -141,7 +141,9 @@ const Stats = ({ groupId }: StatsProps) => {
         previousValues[playerId] = 0;
       });
       
-      response.data.dataPoints.forEach((point: TrendDataPoint) => {
+      // Ensure dataPoints exists and is an array
+      const dataPoints = response.data?.dataPoints || [];
+      dataPoints.forEach((point: TrendDataPoint) => {
         const normalized: TrendDataPoint = { date: point.date };
         selectedPlayers.forEach((playerId) => {
           if (point[playerId] !== undefined && point[playerId] !== null) {
@@ -159,7 +161,7 @@ const Stats = ({ groupId }: StatsProps) => {
       });
       
       setTrendData(normalizedData);
-      setPlayerInfo(response.data.playerInfo);
+      setPlayerInfo(response.data?.playerInfo || {});
       setTrendLoading(false);
     } catch (err: any) {
       console.error('Error fetching trend data:', err);
@@ -240,100 +242,6 @@ const Stats = ({ groupId }: StatsProps) => {
           {error}
         </div>
       )}
-
-      {/* Cumulative Totals Section */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex justify-between items-center flex-wrap gap-4">
-            <div>
-              <h2 className="text-lg font-medium text-gray-900">Cumulative Totals</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {/* Time Period Selector */}
-              <div className="flex space-x-1 bg-gray-100 rounded-md p-1">
-                {(['30d', '90d', 'year', 'all'] as TimePeriod[]).map((period) => (
-                  <button
-                    key={period}
-                    onClick={() => setTimePeriod(period)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      timePeriod === period
-                        ? 'bg-white text-blue-800 shadow-sm'
-                        : 'text-gray-700 hover:text-gray-900'
-                    }`}
-                  >
-                    {period === 'all' ? 'All Time' : period === '30d' ? '30 Days' : period === '90d' ? '90 Days' : '1 Year'}
-                  </button>
-                ))}
-              </div>
-              {/* Sort Buttons */}
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setSortBy('name')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${
-                    sortBy === 'name'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Sort by Name
-                </button>
-                <button
-                  onClick={() => setSortBy('total')}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${
-                    sortBy === 'total'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Sort by Total
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {totals.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">No statistics available yet.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedTotals.map((userTotal) => (
-                  <tr key={userTotal.userId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {userTotal.displayName}
-                      </div>
-                      <div className="text-sm text-gray-500">{userTotal.username}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`text-sm font-medium ${
-                          userTotal.total >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {formatCurrency(userTotal.total)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* Trend Chart Section */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -534,6 +442,100 @@ const Stats = ({ groupId }: StatsProps) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Cumulative Totals Section */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex justify-between items-center flex-wrap gap-4">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Cumulative Totals</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {/* Time Period Selector */}
+              <div className="flex space-x-1 bg-gray-100 rounded-md p-1">
+                {(['30d', '90d', 'year', 'all'] as TimePeriod[]).map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setTimePeriod(period)}
+                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                      timePeriod === period
+                        ? 'bg-white text-blue-800 shadow-sm'
+                        : 'text-gray-700 hover:text-gray-900'
+                    }`}
+                  >
+                    {period === 'all' ? 'All Time' : period === '30d' ? '30 Days' : period === '90d' ? '90 Days' : '1 Year'}
+                  </button>
+                ))}
+              </div>
+              {/* Sort Buttons */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setSortBy('name')}
+                  className={`px-3 py-1 rounded-md text-sm font-medium ${
+                    sortBy === 'name'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Sort by Name
+                </button>
+                <button
+                  onClick={() => setSortBy('total')}
+                  className={`px-3 py-1 rounded-md text-sm font-medium ${
+                    sortBy === 'total'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Sort by Total
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {totals.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-gray-500">No statistics available yet.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedTotals.map((userTotal) => (
+                  <tr key={userTotal.userId} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {userTotal.displayName}
+                      </div>
+                      <div className="text-sm text-gray-500">{userTotal.username}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`text-sm font-medium ${
+                          userTotal.total >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}
+                      >
+                        {formatCurrency(userTotal.total)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

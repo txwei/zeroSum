@@ -84,11 +84,16 @@ const PublicGameEntry = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Safely evaluate math expressions (Excel-style formulas)
+  // Safely evaluate math expressions
   const evaluateExpression = (expr: string): number | null => {
     try {
-      // Remove whitespace and the leading "="
-      const cleanExpr = expr.trim().substring(1).trim();
+      // Remove whitespace
+      let cleanExpr = expr.trim();
+      
+      // Remove leading "=" if present (for backward compatibility)
+      if (cleanExpr.startsWith('=')) {
+        cleanExpr = cleanExpr.substring(1).trim();
+      }
       
       // Only allow numbers, operators, parentheses, and decimal points
       if (!/^[0-9+\-*/().\s]+$/.test(cleanExpr)) {
@@ -876,48 +881,104 @@ const PublicGameEntry = () => {
               </div>
             )}
 
-            <div className="mb-6 space-y-3 sm:space-y-0 sm:flex sm:justify-between sm:items-center">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <span
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
-                    isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}
-                >
-                  {isValid 
-                    ? '✓ Balanced' 
-                    : `Unbalanced (sum: ${formatCurrency(sum)})`}
-                </span>
-                {isSettled && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                    ✓ Settled
+            <div className="mb-6">
+              {/* Mobile: Stack vertically */}
+              <div className="sm:hidden space-y-3">
+                {/* Status badge */}
+                <div className="flex items-center justify-center">
+                  <span
+                    className={`inline-flex items-center px-4 py-2 rounded-lg text-base font-semibold whitespace-nowrap shadow-sm ${
+                      isValid ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                    }`}
+                  >
+                    {isValid 
+                      ? '✓ Balanced' 
+                      : `Unbalanced (sum: ${formatCurrency(sum)})`}
                   </span>
-                )}
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as Currency)}
-                  className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="CNY">CNY (¥)</option>
-                </select>
+                </div>
+                
+                {/* Currency and Settled badge row */}
+                <div className="flex items-center justify-center gap-3">
+                  {isSettled && (
+                    <span className="inline-flex items-center px-4 py-2 rounded-lg text-base font-semibold bg-blue-500 text-white whitespace-nowrap shadow-sm">
+                      ✓ Settled
+                    </span>
+                  )}
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as Currency)}
+                    className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-base font-medium"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="CNY">CNY (¥)</option>
+                  </select>
+                </div>
+                
+                {/* Action button */}
+                <div className="flex items-center justify-center">
+                  {!isSettled ? (
+                    <button
+                      onClick={handleSettle}
+                      disabled={!isValid}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg transform transition-all active:scale-95"
+                    >
+                      Settle Game
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg text-base font-semibold hover:bg-blue-700 whitespace-nowrap shadow-lg transform transition-all active:scale-95"
+                    >
+                      Edit Game
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex space-x-2">
-                {!isSettled ? (
-                  <button
-                    onClick={handleSettle}
-                    disabled={!isValid}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              
+              {/* Desktop: Horizontal layout */}
+              <div className="hidden sm:flex sm:justify-between sm:items-center">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap shadow-sm ${
+                      isValid ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                    }`}
                   >
-                    Settle Game
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleEdit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
+                    {isValid 
+                      ? '✓ Balanced' 
+                      : `Unbalanced (sum: ${formatCurrency(sum)})`}
+                  </span>
+                  {isSettled && (
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-500 text-white whitespace-nowrap shadow-sm">
+                      ✓ Settled
+                    </span>
+                  )}
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as Currency)}
+                    className="px-3 py-1.5 rounded-lg border-2 border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-medium"
                   >
-                    Edit Game
-                  </button>
-                )}
+                    <option value="USD">USD ($)</option>
+                    <option value="CNY">CNY (¥)</option>
+                  </select>
+                </div>
+                <div className="flex space-x-2">
+                  {!isSettled ? (
+                    <button
+                      onClick={handleSettle}
+                      disabled={!isValid}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-md"
+                    >
+                      Settle Game
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleEdit}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 whitespace-nowrap shadow-md"
+                    >
+                      Edit Game
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -991,13 +1052,11 @@ const PublicGameEntry = () => {
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  // Evaluate formula on Enter
+                                  // Evaluate expression on Enter
                                   const value = (e.target as HTMLInputElement).value;
-                                  if (value.startsWith('=')) {
-                                    const result = evaluateExpression(value);
-                                    if (result !== null) {
-                                      updateField(row.index, 'amount', result.toString(), true);
-                                    }
+                                  const result = evaluateExpression(value);
+                                  if (result !== null) {
+                                    updateField(row.index, 'amount', result.toString(), true);
                                   }
                                   e.preventDefault();
                                 }
@@ -1013,22 +1072,12 @@ const PublicGameEntry = () => {
                                   setShowKeyboard(false);
                                   setActiveInputRowIndex(null);
                                   
-                                  // Also evaluate on blur (when clicking away)
+                                  // Save value on blur (don't auto-evaluate)
                                   const value = e.target.value;
-                                  if (value.startsWith('=')) {
-                                    const result = evaluateExpression(value);
-                                    if (result !== null) {
-                                      updateField(row.index, 'amount', result.toString(), true);
-                                    } else {
-                                      // Invalid formula - just save as-is
-                                      updateField(row.index, 'amount', value, true);
-                                    }
-                                  } else {
-                                    updateField(row.index, 'amount', value, true);
-                                  }
+                                  updateField(row.index, 'amount', value, true);
                                 }, 200);
                               }}
-                              placeholder="0.00 or =10+5"
+                              placeholder="0.00 or (102 - 58)"
                               className="w-full pl-8 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                             />
                           </div>
@@ -1059,16 +1108,7 @@ const PublicGameEntry = () => {
                     >
                       {formatCurrency(sum)}
                     </td>
-                    <td className="px-4 py-3">
-                      {!isSettled && (
-                        <button
-                          onClick={addRow}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                        >
-                          + Add Row
-                        </button>
-                      )}
-                    </td>
+                    <td className="px-4 py-3"></td>
                   </tr>
                 </tfoot>
               </table>
@@ -1093,6 +1133,14 @@ const PublicGameEntry = () => {
           onChange={(value) => {
             if (activeInputRowIndex !== null) {
               updateField(activeInputRowIndex, 'amount', value);
+            }
+          }}
+          onEvaluate={(value) => {
+            if (activeInputRowIndex !== null) {
+              const result = evaluateExpression(value);
+              if (result !== null) {
+                updateField(activeInputRowIndex, 'amount', result.toString(), true);
+              }
             }
           }}
           onClose={() => {

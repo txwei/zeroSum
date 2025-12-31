@@ -53,6 +53,7 @@ const PublicGameEntry = () => {
   const amountInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const activeInputRef = useRef<HTMLInputElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const keyboardClosingRef = useRef<boolean>(false); // Track if keyboard is being closed intentionally
 
   // Detect mobile on mount and resize
   useEffect(() => {
@@ -140,7 +141,7 @@ const PublicGameEntry = () => {
       finalSocketUrl = window.location.origin;
     }
     
-    if (!finalSocketUrl.startsWith('http://') && !finalSocketUrl.startsWith('https://')) {
+    if (finalSocketUrl && !finalSocketUrl.startsWith('http://') && !finalSocketUrl.startsWith('https://')) {
       finalSocketUrl = window.location.protocol === 'https:' 
         ? `https://${finalSocketUrl}` 
         : `http://${finalSocketUrl}`;
@@ -467,21 +468,41 @@ const PublicGameEntry = () => {
 
     // Save to server (with short debounce, or immediately if requested)
     const saveToServer = async () => {
-      updatingFieldsRef.current.delete(fieldKey);
-      
       // Only save if row exists
       const currentRows = rowsRef.current;
       if (rowId >= 0 && rowId < currentRows.length) {
         // For amount field, validate before saving
         if (field === 'amount') {
-          const numValue = parseFloat(processedValue as string);
-          // Don't save if value is invalid (empty, NaN, or just partial input like "-" or ".")
-          // Also don't save if it's still a formula (starts with =)
-          if (isNaN(numValue) || processedValue === '' || processedValue === '-' || processedValue === '.' || (typeof processedValue === 'string' && processedValue.startsWith('='))) {
-            // Skip save for invalid/incomplete input
+          const strValue = processedValue as string;
+          // Don't save if value is empty
+          if (strValue === '') {
+            updatingFieldsRef.current.delete(fieldKey);
             return;
           }
+          
+          // Check if it's a valid number or a valid expression
+          // Allow expressions like "(102 - 58)", "10+5", etc.
+          const isExpression = /^[0-9+\-*/().\s]+$/.test(strValue.trim());
+          const numValue = parseFloat(strValue);
+          
+          // Don't save if it's just a partial operator or invalid
+          // But allow expressions that contain operators
+          if (isNaN(numValue)) {
+            // If it's not a valid expression pattern, skip save but keep editing flag
+            if (!isExpression || strValue === '-' || strValue === '.' || strValue === '+' || strValue === '*' || strValue === '/') {
+              // Keep the field in updatingFieldsRef so server updates don't overwrite it
+              return;
+            }
+            // If it's a valid expression but not evaluated yet, skip save (user will evaluate with =)
+            // Keep the field in updatingFieldsRef so server updates don't overwrite it
+            return;
+          }
+          
+          // If it's a valid number, save it
         }
+        
+        // Remove from updatingFieldsRef before saving (only if we're actually going to save)
+        updatingFieldsRef.current.delete(fieldKey);
         
         const payload: any = {
           field,
@@ -1064,20 +1085,47 @@ const PublicGameEntry = () => {
                               onBlur={(e) => {
                                 // Delay to allow keyboard button clicks
                                 setTimeout(() => {
+                                  // If keyboard is being closed intentionally, don't refocus
+                                  if (keyboardClosingRef.current) {
+                                    keyboardClosingRef.current = false;
+                                    setShowKeyboard(false);
+                                    setActiveInputRowIndex(null);
+                                    const value = e.target.value;
+                                    updateField(row.index, 'amount', value, true);
+                                    return;
+                                  }
+                                  
                                   // Check if focus moved to keyboard
                                   const activeElement = document.activeElement;
                                   if (activeElement && activeElement.closest('.math-keyboard')) {
                                     return;
                                   }
-                                  // Double check if keyboard should still be open for this row
-                                  if (showKeyboard && activeInputRowIndex === row.index) {
-                                    // If keyboard is still supposed to be open, refocus the input
-                                    const input = amountInputRefs.current.get(row.index);
-                                    if (input) {
-                                      input.focus();
-                                    }
+                                  
+                                  // Check if focus moved to another input in the same form
+                                  if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                                    // User moved to another field, close keyboard and clear editing flag
+                                    const fieldKey = `${row.index}-amount`;
+                                    updatingFieldsRef.current.delete(fieldKey);
+                                    setShowKeyboard(false);
+                                    setActiveInputRowIndex(null);
+                                    const value = e.target.value;
+                                    updateField(row.index, 'amount', value, true);
                                     return;
                                   }
+                                  
+                                  // If keyboard is being closed, clear editing flag
+                                  if (keyboardClosingRef.current) {
+                                    const fieldKey = `${row.index}-amount`;
+                                    updatingFieldsRef.current.delete(fieldKey);
+                                  }
+                                  
+                                  // If keyboard is still supposed to be open, keep it open
+                                  // But don't refocus - let user click back if they want
+                                  if (showKeyboard && activeInputRowIndex === row.index) {
+                                    // Don't refocus automatically - this was causing the jump
+                                    return;
+                                  }
+                                  
                                   setShowKeyboard(false);
                                   setActiveInputRowIndex(null);
                                   
@@ -1153,6 +1201,12 @@ const PublicGameEntry = () => {
             }
           }}
           onClose={() => {
+            keyboardClosingRef.current = true; // Mark that we're closing intentionally
+            if (activeInputRowIndex !== null) {
+              // Clear the editing flag for this field
+              const fieldKey = `${activeInputRowIndex}-amount`;
+              updatingFieldsRef.current.delete(fieldKey);
+            }
             setShowKeyboard(false);
             setActiveInputRowIndex(null);
             if (activeInputRef.current) {

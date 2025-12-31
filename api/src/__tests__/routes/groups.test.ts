@@ -80,7 +80,8 @@ describe('Group Routes', () => {
     it('should return list of user groups', async () => {
       await createTestGroup(user1._id, 'Group 1');
       await createTestGroup(user1._id, 'Group 2');
-      await createTestGroup(user2._id, 'Group 3'); // Different user
+      // Create a private group for user2 so user1 won't see it
+      await createTestGroup(user2._id, 'Group 3', undefined, [user2._id], false);
 
       const response = await request(app)
         .get('/api/groups')
@@ -109,9 +110,10 @@ describe('Group Routes', () => {
     });
 
     it('should return 403 for non-member', async () => {
+      // Create a private group for this test
       const group = await createTestGroup(user1._id, 'Test Group', undefined, [
         user1._id,
-      ]);
+      ], false);
 
       const response = await request(app)
         .get(`/api/groups/${group._id}`)

@@ -41,11 +41,13 @@ describe('Stats Routes', () => {
     });
 
     it('should return 403 when user is not a member of the group', async () => {
+      // Create a private group for this test
+      const privateGroup = await createTestGroup(user1._id, 'Private Group', undefined, [user1._id], false);
       const user2 = await createTestUser('user2', 'User 2');
       const user2Token = createAuthHeader(user2._id);
 
       const response = await request(app)
-        .get(`/api/stats/totals?groupId=${group._id}`)
+        .get(`/api/stats/totals?groupId=${privateGroup._id}`)
         .set('Authorization', user2Token);
 
       expect(response.status).toBe(403);
@@ -72,11 +74,13 @@ describe('Stats Routes', () => {
     });
 
     it('should return 403 when user is not a member of the group', async () => {
+      // Create a private group for this test
+      const privateGroup = await createTestGroup(user1._id, 'Private Group', undefined, [user1._id], false);
       const user2 = await createTestUser('user2', 'User 2');
       const user2Token = createAuthHeader(user2._id);
 
       const response = await request(app)
-        .get(`/api/stats/user/${user2._id}?groupId=${group._id}`)
+        .get(`/api/stats/user/${user2._id}?groupId=${privateGroup._id}`)
         .set('Authorization', user2Token);
 
       expect(response.status).toBe(403);

@@ -61,13 +61,15 @@ export async function createTestGroup(
   createdByUserId: mongoose.Types.ObjectId,
   name: string = 'Test Group',
   description?: string,
-  memberIds?: mongoose.Types.ObjectId[]
+  memberIds?: mongoose.Types.ObjectId[],
+  isPublic: boolean = true
 ): Promise<TestGroup> {
   const group = new Group({
     name,
     description,
     createdByUserId,
     memberIds: memberIds || [createdByUserId],
+    isPublic,
   });
   await group.save();
   return {

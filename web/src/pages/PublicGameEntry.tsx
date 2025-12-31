@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import apiClient from '../api/client';
 import { getBasePath, getApiUrl, isDev } from '../utils/env';
+import MathKeyboard from '../components/MathKeyboard';
 
 interface Game {
   _id: string;
@@ -47,6 +48,21 @@ const PublicGameEntry = () => {
   const [rows, setRows] = useState<TransactionRow[]>([]);
   const [currency, setCurrency] = useState<Currency>('USD');
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [activeInputRowIndex, setActiveInputRowIndex] = useState<number | null>(null);
+  const amountInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
+  const activeInputRef = useRef<HTMLInputElement | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const socketRef = useRef<Socket | null>(null);
   const updatingFieldsRef = useRef<Set<string>>(new Set()); // Track fields being updated locally
@@ -860,10 +876,10 @@ const PublicGameEntry = () => {
               </div>
             )}
 
-            <div className="mb-6 flex justify-between items-center">
-              <div className="flex items-center space-x-3">
+            <div className="mb-6 space-y-3 sm:space-y-0 sm:flex sm:justify-between sm:items-center">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <span
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
                     isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}
                 >
@@ -872,7 +888,7 @@ const PublicGameEntry = () => {
                     : `Unbalanced (sum: ${formatCurrency(sum)})`}
                 </span>
                 {isSettled && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
                     ✓ Settled
                   </span>
                 )}
@@ -890,14 +906,14 @@ const PublicGameEntry = () => {
                   <button
                     onClick={handleSettle}
                     disabled={!isValid}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                   >
                     Settle Game
                   </button>
                 ) : (
                   <button
                     onClick={handleEdit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 whitespace-nowrap"
                   >
                     Edit Game
                   </button>
@@ -954,10 +970,25 @@ const PublicGameEntry = () => {
                               {getCurrencySymbol()}
                             </span>
                             <input
+                              ref={(el) => {
+                                if (el) {
+                                  amountInputRefs.current.set(row.index, el);
+                                } else {
+                                  amountInputRefs.current.delete(row.index);
+                                }
+                              }}
                               type="text"
                               value={row.amount}
                               onChange={(e) => updateField(row.index, 'amount', e.target.value)}
-                              inputMode="decimal"
+                              inputMode={isMobile ? "none" : "text"}
+                              onFocus={(e) => {
+                                // Only show keyboard on mobile
+                                if (isMobile) {
+                                  activeInputRef.current = e.target;
+                                  setActiveInputRowIndex(row.index);
+                                  setShowKeyboard(true);
+                                }
+                              }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   // Evaluate formula on Enter
@@ -972,19 +1003,30 @@ const PublicGameEntry = () => {
                                 }
                               }}
                               onBlur={(e) => {
-                                // Also evaluate on blur (when clicking away)
-                                const value = e.target.value;
-                                if (value.startsWith('=')) {
-                                  const result = evaluateExpression(value);
-                                  if (result !== null) {
-                                    updateField(row.index, 'amount', result.toString(), true);
+                                // Delay to allow keyboard button clicks
+                                setTimeout(() => {
+                                  // Check if focus moved to keyboard
+                                  const activeElement = document.activeElement;
+                                  if (activeElement && activeElement.closest('.math-keyboard')) {
+                                    return;
+                                  }
+                                  setShowKeyboard(false);
+                                  setActiveInputRowIndex(null);
+                                  
+                                  // Also evaluate on blur (when clicking away)
+                                  const value = e.target.value;
+                                  if (value.startsWith('=')) {
+                                    const result = evaluateExpression(value);
+                                    if (result !== null) {
+                                      updateField(row.index, 'amount', result.toString(), true);
+                                    } else {
+                                      // Invalid formula - just save as-is
+                                      updateField(row.index, 'amount', value, true);
+                                    }
                                   } else {
-                                    // Invalid formula - just save as-is
                                     updateField(row.index, 'amount', value, true);
                                   }
-                                } else {
-                                  updateField(row.index, 'amount', value, true);
-                                }
+                                }, 200);
                               }}
                               placeholder="0.00 or =10+5"
                               className="w-full pl-8 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -1017,7 +1059,7 @@ const PublicGameEntry = () => {
                     >
                       {formatCurrency(sum)}
                     </td>
-                    <td>
+                    <td className="px-4 py-3">
                       {!isSettled && (
                         <button
                           onClick={addRow}
@@ -1031,9 +1073,38 @@ const PublicGameEntry = () => {
                 </tfoot>
               </table>
             </div>
+            {!isSettled && (
+              <div className="mt-4 sm:hidden">
+                <button
+                  onClick={addRow}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md text-base font-medium hover:bg-blue-700 flex items-center justify-center space-x-2"
+                >
+                  <span className="text-xl">+</span>
+                  <span>Add Row</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+      {showKeyboard && activeInputRowIndex !== null && (
+        <MathKeyboard
+          value={rows[activeInputRowIndex]?.amount || ''}
+          onChange={(value) => {
+            if (activeInputRowIndex !== null) {
+              updateField(activeInputRowIndex, 'amount', value);
+            }
+          }}
+          onClose={() => {
+            setShowKeyboard(false);
+            setActiveInputRowIndex(null);
+            if (activeInputRef.current) {
+              activeInputRef.current.blur();
+            }
+          }}
+          inputRef={activeInputRef}
+        />
+      )}
     </div>
   );
 };

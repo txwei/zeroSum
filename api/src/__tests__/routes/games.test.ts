@@ -80,6 +80,8 @@ describe('Game Routes', () => {
     });
 
     it('should fail when non-member tries to create game', async () => {
+      // Create a private group for this test
+      const privateGroup = await createTestGroup(user1._id, 'Private Group', undefined, [user1._id], false);
       const user3 = await createTestUser('user3', 'User 3');
       const user3Token = createAuthHeader(user3._id);
 
@@ -89,7 +91,7 @@ describe('Game Routes', () => {
         .send({
           name: 'Test Game',
           date: new Date().toISOString(),
-          groupId: group._id.toString(),
+          groupId: privateGroup._id.toString(),
           transactions: [],
         });
 

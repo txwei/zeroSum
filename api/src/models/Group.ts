@@ -5,6 +5,7 @@ export interface IGroup extends Document {
   description?: string;
   createdByUserId: Types.ObjectId;
   memberIds: Types.ObjectId[];
+  isPublic: boolean;
   createdAt: Date;
 }
 
@@ -29,6 +30,11 @@ const GroupSchema = new Schema<IGroup>(
       ref: 'User',
       required: true,
       default: [],
+    },
+    isPublic: {
+      type: Boolean,
+      required: true,
+      default: true,
     },
     createdAt: {
       type: Date,

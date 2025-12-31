@@ -16,6 +16,7 @@ interface Group {
     username: string;
     displayName: string;
   }>;
+  isPublic: boolean;
   createdAt: string;
 }
 
@@ -60,6 +61,8 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
 
   const fetchGroups = async () => {
     try {
+      // Fetch groups - works for both authenticated and unauthenticated users
+      // Backend will return public groups for everyone, and private groups for members
       const response = await apiClient.get('/groups');
       const fetchedGroups = response.data;
       setGroups(fetchedGroups);
@@ -76,7 +79,8 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       }
 
       // Prefetch all data after groups are loaded (non-blocking)
-      if (fetchedGroups.length > 0) {
+      // Only prefetch if user is logged in
+      if (user && fetchedGroups.length > 0) {
         setTimeout(() => prefetchAllData(fetchedGroups), 500);
       }
     } catch (error) {
@@ -107,6 +111,8 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
     }
 
     // Fetch if not cached
+    // Works for both authenticated and unauthenticated users
+    // Backend will return public groups without auth, private groups require auth
     try {
       const response = await apiClient.get(`/groups/${groupId}`);
       const groupDetails = response.data as GroupDetails;
@@ -136,9 +142,8 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchGroups();
-    }
+    // Fetch groups even if not logged in (to show public groups)
+    fetchGroups();
   }, [user]);
 
   const prefetchAllData = (groupsToPrefetch: Group[]) => {

@@ -7,6 +7,7 @@ import { isGroupMember } from '../middleware/groupAuth';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { emitGameUpdate } from '../socket';
 
 const router = express.Router();
@@ -529,9 +530,18 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.userId?.toString() || '';
-    if (!isGroupMember(group, userId)) {
+    
+    // For public groups, allow authenticated users to create games (even if not a member)
+    // For private groups, require membership
+    if (!group.isPublic && !isGroupMember(group, userId)) {
       res.status(403).json({ error: 'Not a member of this group' });
       return;
+    }
+    
+    // If user is not a member, add them to the group (for public groups)
+    if (!isGroupMember(group, userId)) {
+      group.memberIds.push(new mongoose.Types.ObjectId(userId));
+      await group.save();
     }
 
     // Validate zero-sum if transactions are provided
@@ -614,18 +624,25 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// List games
-router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
+// List games - public groups accessible without auth, private groups require membership
+router.get('/', async (req: Request, res: Response) => {
   try {
     const { groupId } = req.query;
 
-    const userGroups = await Group.find({
-      memberIds: req.userId,
-    }).select('_id');
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let userId: string | null = null;
 
-    const groupIds = userGroups.map((g) => g._id);
-
-    let query: any = { groupId: { $in: groupIds } };
+    // Try to get user ID if token is provided (optional auth)
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as {
+          userId: string;
+        };
+        userId = decoded.userId;
+      } catch (error) {
+        // Invalid token, continue as unauthenticated
+      }
+    }
 
     if (groupId) {
       if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
@@ -639,17 +656,59 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
         return;
       }
 
-      const isMember = group.memberIds.some(
-        (memberId) => memberId.toString() === req.userId
-      );
-      if (!isMember) {
-        res.status(403).json({ error: 'Not a member of this group' });
-        return;
+      // Check access: public groups accessible to everyone, private groups require membership
+      if (!group.isPublic) {
+        if (!userId) {
+          res.status(401).json({ error: 'Authentication required for private groups' });
+          return;
+        }
+        const isMember = group.memberIds.some(
+          (memberId) => memberId.toString() === userId
+        );
+        if (!isMember) {
+          res.status(403).json({ error: 'Not a member of this group' });
+          return;
+        }
       }
 
-      query = { groupId: new mongoose.Types.ObjectId(groupId as string) };
+      // Allow access to this group's games
+      const query = { groupId: new mongoose.Types.ObjectId(groupId as string) };
+      const games = await Game.find(query)
+        .populate('transactions.userId', 'username displayName')
+        .populate('createdByUserId', 'username displayName')
+        .populate('groupId', 'name')
+        .sort({ date: -1, createdAt: -1 });
+
+      res.json(games);
+      return;
     }
 
+    // No groupId specified - return games from all accessible groups
+    // For authenticated users: public groups + groups they're members of
+    // For unauthenticated users: only public groups
+    let accessibleGroupIds: mongoose.Types.ObjectId[] = [];
+
+    if (userId) {
+      // Get public groups and groups user is a member of
+      const publicGroups = await Group.find({ isPublic: true }).select('_id');
+      const userGroups = await Group.find({
+        memberIds: userId,
+      }).select('_id');
+      
+      const allGroupIds = [
+        ...publicGroups.map(g => g._id),
+        ...userGroups.map(g => g._id),
+      ];
+      // Remove duplicates
+      accessibleGroupIds = Array.from(new Set(allGroupIds.map(id => id.toString())))
+        .map(id => new mongoose.Types.ObjectId(id));
+    } else {
+      // Only public groups for unauthenticated users
+      const publicGroups = await Group.find({ isPublic: true }).select('_id');
+      accessibleGroupIds = publicGroups.map(g => g._id);
+    }
+
+    const query: any = { groupId: { $in: accessibleGroupIds } };
     const games = await Game.find(query)
       .populate('transactions.userId', 'username displayName')
       .populate('createdByUserId', 'username displayName')

@@ -22,6 +22,7 @@ interface Group {
     username: string;
     displayName: string;
   }>;
+  isPublic: boolean;
   createdAt: string;
 }
 
@@ -261,17 +262,26 @@ const GroupDetails = () => {
                     Admin
                   </span>
                 )}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  group.isPublic 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {group.isPublic ? 'Public' : 'Private'}
+                </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowManage(!showManage)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-            >
-              {showManage ? 'Hide' : 'Manage'}
-            </button>
-          </div>
+          {user && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowManage(!showManage)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
+              >
+                {showManage ? 'Hide' : 'Manage'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -307,8 +317,8 @@ const GroupDetails = () => {
         </div>
       )}
 
-      {/* Manage Section */}
-      {showManage && (
+      {/* Manage Section - Only show if user is logged in */}
+      {showManage && user && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Group Management</h2>
           

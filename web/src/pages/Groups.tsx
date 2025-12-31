@@ -165,7 +165,16 @@ const Groups = () => {
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{group.name}</h3>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        group.isPublic 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {group.isPublic ? 'Public' : 'Private'}
+                      </span>
+                    </div>
                     {group.description && (
                       <p className="text-sm text-gray-600 mb-3">{group.description}</p>
                     )}

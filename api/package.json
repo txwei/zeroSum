@@ -18,7 +18,8 @@
     "ci": "npm run type-check && npm run test:quick && npm run build",
     "create-user": "tsx scripts/create-user.ts",
     "fix-membership": "tsx scripts/fix-group-membership.ts",
-    "check-membership": "tsx scripts/check-group-membership.ts"
+    "check-membership": "tsx scripts/check-group-membership.ts",
+    "set-groups-public": "tsx scripts/set-groups-public.ts"
   },
   "keywords": [],
   "author": "",

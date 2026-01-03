@@ -480,25 +480,25 @@ const PublicGameEntry = () => {
             return;
           }
           
-          // Check if it's a valid number or a valid expression
-          // Allow expressions like "(102 - 58)", "10+5", etc.
-          const isExpression = /^[0-9+\-*/().\s]+$/.test(strValue.trim());
-          const numValue = parseFloat(strValue);
+          // Check if the string contains operators (indicating it's an expression, not just a number)
+          const hasOperators = /[+\-*/()]/.test(strValue);
           
-          // Don't save if it's just a partial operator or invalid
-          // But allow expressions that contain operators
-          if (isNaN(numValue)) {
-            // If it's not a valid expression pattern, skip save but keep editing flag
-            if (!isExpression || strValue === '-' || strValue === '.' || strValue === '+' || strValue === '*' || strValue === '/') {
-              // Keep the field in updatingFieldsRef so server updates don't overwrite it
-              return;
-            }
-            // If it's a valid expression but not evaluated yet, skip save (user will evaluate with =)
+          // If it contains operators, it's an expression - don't save until evaluated
+          if (hasOperators) {
             // Keep the field in updatingFieldsRef so server updates don't overwrite it
             return;
           }
           
-          // If it's a valid number, save it
+          // Check if it's a valid number
+          const numValue = parseFloat(strValue);
+          
+          // Don't save if it's just a partial operator or invalid
+          if (isNaN(numValue) || strValue === '-' || strValue === '.' || strValue === '+' || strValue === '*' || strValue === '/') {
+            // Keep the field in updatingFieldsRef so server updates don't overwrite it
+            return;
+          }
+          
+          // If it's a valid number (no operators), save it
         }
         
         // Remove from updatingFieldsRef before saving (only if we're actually going to save)
@@ -780,7 +780,7 @@ const PublicGameEntry = () => {
   const isSettled = game?.settled || false;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8 pb-80 sm:pb-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {showCopiedMessage && (
           <div className="fixed top-4 right-4 bg-white shadow-lg border border-gray-200 rounded-lg px-4 py-3 z-50 flex items-center space-x-2 animate-in fade-in slide-in-from-top-2 duration-200">

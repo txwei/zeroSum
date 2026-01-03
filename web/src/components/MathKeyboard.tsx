@@ -151,8 +151,8 @@ const MathKeyboard: React.FC<MathKeyboardProps> = ({ value, onChange, onClose, i
   return (
     <div
       ref={keyboardRef}
-      className="math-keyboard fixed bottom-0 left-0 right-0 bg-black z-50 sm:hidden"
-      style={{ maxHeight: '35vh' }}
+      className="math-keyboard fixed bottom-0 left-0 right-0 bg-black z-40 sm:hidden"
+      style={{ maxHeight: '35vh', boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1)' }}
       onMouseDown={(e) => e.preventDefault()}
       onTouchStart={(e) => e.preventDefault()}
     >

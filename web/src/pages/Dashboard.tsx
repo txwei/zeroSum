@@ -4,41 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import CreateGame from './CreateGame';
 import GameDetails from './GameDetails';
 import { GameCardSkeleton, SkeletonLoader } from '../components/SkeletonLoader';
-
-interface Game {
-  _id: string;
-  name: string;
-  date: string;
-  settled?: boolean;
-  createdByUserId: {
-    _id: string;
-    username: string;
-    displayName: string;
-  };
-  groupId: {
-    _id: string;
-    name: string;
-  };
-  transactions: Array<{
-    userId?: {
-      _id: string;
-      username: string;
-      displayName: string;
-    };
-    playerName?: string;
-    amount: number;
-  }>;
-}
+import { Game } from '../types/api';
+import { gameDetailsCache, gameListCache } from '../utils/gameCache';
 
 interface DashboardProps {
   groupId: string;
 }
-
-// Cache for game details (shared between Dashboard and GameDetails)
-export const gameDetailsCache = new Map<string, Game>();
-
-// Cache for game lists by groupId
-const gameListCache = new Map<string, Game[]>();
 
 const Dashboard = ({ groupId }: DashboardProps) => {
   const { user } = useAuth();

@@ -1,503 +1,54 @@
 import express, { Response, Request } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { Game } from '../models/Game';
-import { Group } from '../models/Group';
-import { isGroupMember } from '../middleware/groupAuth';
-import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
+import { StatsService } from '../services/StatsService';
+import { asyncHandler } from '../middleware/errorHandler';
+import { validate } from '../middleware/validation';
+import { validateId, validateRequiredArray } from '../middleware/validation';
 
 const router = express.Router();
-
-// Helper function to calculate date filter based on time period
-const getDateFilter = (timePeriod: string | undefined): any => {
-  if (!timePeriod || timePeriod === 'all') {
-    return {};
-  }
-
-  const now = new Date();
-  let startDate: Date;
-
-  switch (timePeriod) {
-    case '30d':
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      break;
-    case '90d':
-      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      break;
-    case 'year':
-      startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-      break;
-    default:
-      return {};
-  }
-
-  // Filter games where either date (if exists) or createdAt is within the time period
-  // This handles cases where games might have date set or just use createdAt
-  return {
-    $or: [
-      { date: { $gte: startDate } },
-      { createdAt: { $gte: startDate } },
-    ],
-  };
-};
+const statsService = new StatsService();
 
 // Get cumulative totals per user - public groups accessible without auth, private groups require membership
-router.get('/totals', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/totals',
+  asyncHandler(async (req: Request, res: Response) => {
     const { groupId, timePeriod } = req.query;
-
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    let userId: string | null = null;
-
-    // Try to get user ID if token is provided (optional auth)
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as {
-          userId: string;
-        };
-        userId = decoded.userId;
-      } catch (error) {
-        // Invalid token, continue as unauthenticated
-      }
-    }
-
-    // If groupId is provided, check access
-    if (groupId) {
-      if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
-        res.status(400).json({ error: 'Invalid group ID' });
-        return;
-      }
-
-      const group = await Group.findById(groupId);
-      if (!group) {
-        res.status(404).json({ error: 'Group not found' });
-        return;
-      }
-
-      // Check access: public groups accessible to everyone, private groups require membership
-      if (!group.isPublic) {
-        if (!userId) {
-          res.status(401).json({ error: 'Authentication required for private groups' });
-          return;
-        }
-        if (!isGroupMember(group, userId)) {
-          res.status(403).json({ error: 'Not a member of this group' });
-          return;
-        }
-      }
-
-      // Allow access to this group's games
-      const dateFilter = getDateFilter(timePeriod as string);
-      let query: any = { groupId: new mongoose.Types.ObjectId(groupId as string) };
-      
-      if (Object.keys(dateFilter).length > 0) {
-        query = {
-          $and: [
-            { groupId: new mongoose.Types.ObjectId(groupId as string) },
-            dateFilter,
-          ],
-        };
-      }
-
-      const games = await Game.find(query).populate('transactions.userId', 'username displayName');
-
-      // Calculate totals per user
-      const userTotals: Record<
-        string,
-        { userId: string; username: string; displayName: string; total: number }
-      > = {};
-
-      games.forEach((game) => {
-        game.transactions.forEach((transaction) => {
-          let playerId: string;
-          let username: string;
-          let displayName: string;
-
-          if (transaction.userId) {
-            playerId = transaction.userId._id.toString();
-            username = (transaction.userId as any).username;
-            displayName = (transaction.userId as any).displayName;
-          } else if (transaction.playerName && transaction.playerName !== '_' && transaction.playerName.trim() !== '') {
-            playerId = `playerName:${transaction.playerName}`;
-            username = transaction.playerName;
-            displayName = transaction.playerName;
-          } else {
-            return;
-          }
-
-          if (!userTotals[playerId]) {
-            userTotals[playerId] = {
-              userId: playerId,
-              username,
-              displayName,
-              total: 0,
-            };
-          }
-
-          userTotals[playerId].total += transaction.amount;
-        });
-      });
-
-      const totals = Object.values(userTotals).sort((a, b) => b.total - a.total);
-      res.json(totals);
-      return;
-    }
-
-    // No groupId specified - return stats from all accessible groups
-    // For authenticated users: public groups + groups they're members of
-    // For unauthenticated users: only public groups
-    let accessibleGroupIds: mongoose.Types.ObjectId[] = [];
-
-    if (userId) {
-      const publicGroups = await Group.find({ isPublic: true }).select('_id');
-      const userGroups = await Group.find({
-        memberIds: userId,
-      }).select('_id');
-      
-      const allGroupIds = [
-        ...publicGroups.map(g => g._id),
-        ...userGroups.map(g => g._id),
-      ];
-      accessibleGroupIds = Array.from(new Set(allGroupIds.map(id => id.toString())))
-        .map(id => new mongoose.Types.ObjectId(id));
-    } else {
-      const publicGroups = await Group.find({ isPublic: true }).select('_id');
-      accessibleGroupIds = publicGroups.map(g => g._id);
-    }
-
-    const dateFilter = getDateFilter(timePeriod as string);
-    let query: any = { groupId: { $in: accessibleGroupIds } };
-    
-    if (Object.keys(dateFilter).length > 0) {
-      query = {
-        $and: [
-          { groupId: { $in: accessibleGroupIds } },
-          dateFilter,
-        ],
-      };
-    }
-
-    const games = await Game.find(query).populate('transactions.userId', 'username displayName');
-
-    // Calculate totals per user
-    // Handle both userId-based transactions (authenticated users) and playerName-based transactions (public games)
-    const userTotals: Record<
-      string,
-      { userId: string; username: string; displayName: string; total: number }
-    > = {};
-
-    games.forEach((game) => {
-      game.transactions.forEach((transaction) => {
-        let playerId: string;
-        let username: string;
-        let displayName: string;
-
-        if (transaction.userId) {
-          // Transaction has userId (authenticated user)
-          playerId = transaction.userId._id.toString();
-          username = (transaction.userId as any).username;
-          displayName = (transaction.userId as any).displayName;
-        } else if (transaction.playerName && transaction.playerName !== '_' && transaction.playerName.trim() !== '') {
-          // Transaction has playerName but no userId (public game entry)
-          // Use playerName as the identifier - create a unique key based on playerName
-          // Note: This groups all transactions with the same playerName together
-          playerId = `playerName:${transaction.playerName}`;
-          username = transaction.playerName;
-          displayName = transaction.playerName;
-        } else {
-          // Skip transactions with neither userId nor valid playerName
-          return;
-        }
-
-        if (!userTotals[playerId]) {
-          userTotals[playerId] = {
-            userId: playerId,
-            username,
-            displayName,
-            total: 0,
-          };
-        }
-
-        userTotals[playerId].total += transaction.amount;
-      });
-    });
-
-    const totals = Object.values(userTotals).sort((a, b) => b.total - a.total);
-
+    const totals = await statsService.getTotals(req, groupId as string | undefined, timePeriod as string | undefined);
     res.json(totals);
-  } catch (error) {
-    console.error('Get totals error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 // Get user's game history
-router.get('/user/:userId', authenticate, async (req: AuthRequest, res: Response) => {
-  try {
+router.get(
+  '/user/:userId',
+  authenticate,
+  validate({
+    params: {
+      userId: validateId,
+    },
+  }),
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
     const { groupId } = req.query;
+    const history = await statsService.getUserHistory(req.userId!, userId, groupId as string | undefined);
+    res.json(history);
+  })
+);
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      res.status(400).json({ error: 'Invalid user ID' });
-      return;
-    }
-
-    // Get all groups user belongs to
-    const userGroups = await Group.find({
-      memberIds: req.userId,
-    }).select('_id');
-
-    const groupIds = userGroups.map((g) => g._id);
-
-    let query: any = {
-      'transactions.userId': userId,
-      groupId: { $in: groupIds },
-    };
-
-    // If groupId is provided, filter by that group (and verify membership)
-    if (groupId) {
-      if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
-        res.status(400).json({ error: 'Invalid group ID' });
-        return;
-      }
-
-      const group = await Group.findById(groupId);
-      if (!group) {
-        res.status(404).json({ error: 'Group not found' });
-        return;
-      }
-
-      const userId = req.userId?.toString() || '';
-      if (!isGroupMember(group, userId)) {
-        res.status(403).json({ error: 'Not a member of this group' });
-        return;
-      }
-
-      query.groupId = new mongoose.Types.ObjectId(groupId as string);
-    }
-
-    const games = await Game.find(query)
-      .populate('transactions.userId', 'username displayName')
-      .populate('createdByUserId', 'username displayName')
-      .populate('groupId', 'name')
-      .sort({ date: -1, createdAt: -1 });
-
-    // Calculate user's amount for each game
-    const gameHistory = games.map((game) => {
-      const userTransaction = game.transactions.find(
-        (t) => t.userId && t.userId._id.toString() === userId
-      );
-      return {
-        game: {
-          id: game._id,
-          name: game.name,
-          date: game.date,
-          createdBy: game.createdByUserId,
-        },
-        amount: userTransaction ? userTransaction.amount : 0,
-      };
-    });
-
-    res.json(gameHistory);
-  } catch (error) {
-    console.error('Get user history error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get trend data (time-series cumulative balances) for selected players - public groups accessible without auth
-router.get('/trends', async (req: Request, res: Response) => {
-  try {
+// Get trend data (time-series cumulative balances) for selected players
+router.get(
+  '/trends',
+  validate({
+    query: {
+      groupId: validateId,
+      playerIds: validateRequiredArray,
+    },
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const { groupId, playerIds } = req.query;
-
-    if (!playerIds || !Array.isArray(playerIds) || playerIds.length === 0) {
-      res.status(400).json({ error: 'playerIds array is required' });
-      return;
-    }
-
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    let userId: string | null = null;
-
-    // Try to get user ID if token is provided (optional auth)
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as {
-          userId: string;
-        };
-        userId = decoded.userId;
-      } catch (error) {
-        // Invalid token, continue as unauthenticated
-      }
-    }
-
-    // Separate player IDs into userIds (ObjectIds) and playerNames (strings starting with "playerName:")
-    const userIds: string[] = [];
-    const playerNames: string[] = [];
-    
-    (playerIds as string[]).forEach((id) => {
-      if (id.startsWith('playerName:')) {
-        playerNames.push(id.replace('playerName:', ''));
-      } else if (mongoose.Types.ObjectId.isValid(id)) {
-        userIds.push(id);
-      }
-    });
-
-    if (userIds.length === 0 && playerNames.length === 0) {
-      res.status(400).json({ error: 'No valid player IDs provided' });
-      return;
-    }
-
-    // If groupId is provided, check access
-    if (groupId) {
-      if (!mongoose.Types.ObjectId.isValid(groupId as string)) {
-        res.status(400).json({ error: 'Invalid group ID' });
-        return;
-      }
-
-      const group = await Group.findById(groupId);
-      if (!group) {
-        res.status(404).json({ error: 'Group not found' });
-        return;
-      }
-
-      // Check access: public groups accessible to everyone, private groups require membership
-      if (!group.isPublic) {
-        if (!userId) {
-          res.status(401).json({ error: 'Authentication required for private groups' });
-          return;
-        }
-        if (!isGroupMember(group, userId)) {
-          res.status(403).json({ error: 'Not a member of this group' });
-          return;
-        }
-      }
-
-      // Build query to match either userId or playerName
-      const queryConditions: any[] = [];
-      if (userIds.length > 0) {
-        queryConditions.push({
-          'transactions.userId': { $in: userIds.map((id) => new mongoose.Types.ObjectId(id)) },
-        });
-      }
-      if (playerNames.length > 0) {
-        queryConditions.push({
-          'transactions.playerName': { $in: playerNames },
-        });
-      }
-
-      let query: any = {
-        groupId: new mongoose.Types.ObjectId(groupId as string),
-      };
-      
-      if (queryConditions.length > 0) {
-        query.$or = queryConditions;
-      }
-
-      const games = await Game.find(query)
-        .populate('transactions.userId', 'username displayName')
-        .sort({ date: 1, createdAt: 1 }); // Sort chronologically
-
-      // Build time-series data: for each date, calculate cumulative balance for each player
-      interface DataPoint {
-        date: string;
-        [playerId: string]: string | number;
-      }
-
-      const dataPoints: DataPoint[] = [];
-      const playerBalances: Record<string, number> = {};
-      const playerInfo: Record<string, { username: string; displayName: string }> = {};
-
-      // Build map of all valid player identifiers (both userIds and playerName-based IDs)
-      const allPlayerIds = [...userIds, ...playerNames.map((name) => `playerName:${name}`)];
-
-      // Initialize balances
-      allPlayerIds.forEach((id) => {
-        playerBalances[id] = 0;
-      });
-
-      // Process games chronologically
-      games.forEach((game) => {
-        // Use game.date if available, otherwise use createdAt
-        const gameDate = game.date || game.createdAt;
-        const dateKey = gameDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-
-        // Find or create data point for this date
-        let dataPoint = dataPoints.find((dp) => dp.date === dateKey);
-        if (!dataPoint) {
-          const newDataPoint: DataPoint = { date: dateKey };
-          allPlayerIds.forEach((id) => {
-            newDataPoint[id] = playerBalances[id];
-          });
-          dataPoints.push(newDataPoint);
-          dataPoint = newDataPoint;
-        }
-
-        // Process transactions for this game
-        game.transactions.forEach((transaction) => {
-          let playerId: string;
-          let username: string;
-          let displayName: string;
-
-          if (transaction.userId) {
-            // Transaction has userId
-            playerId = transaction.userId._id.toString();
-            username = (transaction.userId as any).username;
-            displayName = (transaction.userId as any).displayName;
-          } else if (transaction.playerName && transaction.playerName !== '_' && transaction.playerName.trim() !== '') {
-            // Transaction has playerName but no userId
-            playerId = `playerName:${transaction.playerName}`;
-            username = transaction.playerName;
-            displayName = transaction.playerName;
-          } else {
-            // Skip transactions with neither userId nor valid playerName
-            return;
-          }
-
-          // Only process if this player is in our selected list
-          if (!allPlayerIds.includes(playerId)) {
-            return;
-          }
-
-          // Update cumulative balance
-          playerBalances[playerId] += transaction.amount;
-
-          // Store player info
-          if (!playerInfo[playerId]) {
-            playerInfo[playerId] = {
-              username,
-              displayName,
-            };
-          }
-
-          // Update data point with new balance
-          dataPoint[playerId] = playerBalances[playerId];
-        });
-      });
-
-      // Ensure we have at least one data point (even if no games)
-      if (dataPoints.length === 0) {
-        const today = new Date().toISOString().split('T')[0];
-        const emptyPoint: DataPoint = { date: today };
-        allPlayerIds.forEach((id) => {
-          emptyPoint[id] = 0;
-        });
-        dataPoints.push(emptyPoint);
-      }
-
-      res.json({
-        dataPoints,
-        playerInfo,
-      });
-      return;
-    }
-
-    // No groupId specified - not supported for trends (need specific group)
-    res.status(400).json({ error: 'groupId is required for trends' });
-  } catch (error) {
-    console.error('Get trends error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const trends = await statsService.getTrends(req, groupId as string, playerIds as string[]);
+    res.json(trends);
+  })
+);
 
 export default router;
-

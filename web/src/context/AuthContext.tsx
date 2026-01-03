@@ -1,11 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import apiClient from '../api/client';
+import { authService } from '../services/authService';
+import { userService } from '../services/userService';
+import { User } from '../types/api';
 
-interface User {
-  id: string;
-  username: string;
-  displayName: string;
-}
 
 interface AuthContextType {
   user: User | null;
@@ -71,8 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await apiClient.post('/auth/login', { username, password });
-      const { token: newToken, user: newUser } = response.data;
+      const { token: newToken, user: newUser } = await authService.login(username, password);
 
       setToken(newToken);
       setUser(newUser);
@@ -85,12 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (username: string, displayName: string, password: string) => {
     try {
-      const response = await apiClient.post('/auth/register', {
-        username,
-        displayName,
-        password,
-      });
-      const { token: newToken, user: newUser } = response.data;
+      const { token: newToken, user: newUser } = await authService.register(username, displayName, password);
 
       setToken(newToken);
       setUser(newUser);
@@ -103,8 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateDisplayName = async (displayName: string) => {
     try {
-      const response = await apiClient.patch('/users/me', { displayName });
-      const updatedUser = response.data;
+      const updatedUser = await userService.updateDisplayName(displayName);
       
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));

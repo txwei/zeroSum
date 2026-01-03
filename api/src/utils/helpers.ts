@@ -1,0 +1,69 @@
+import crypto from 'crypto';
+import { TOKEN_LENGTH } from './constants';
+
+/**
+ * Helper utility functions
+ */
+
+export function generatePublicToken(): string {
+  return crypto.randomBytes(TOKEN_LENGTH).toString('base64url');
+}
+
+export function normalizeUsername(username: string): string {
+  return username.toLowerCase().trim();
+}
+
+export function parseDate(dateString?: string): Date | undefined {
+  if (!dateString || dateString.trim() === '') {
+    return undefined;
+  }
+  
+  // Parse YYYY-MM-DD format and create date at UTC midnight
+  // This prevents timezone issues where the date might shift by a day
+  const parts = dateString.split('-').map(Number);
+  if (parts.length !== 3) {
+    throw new Error('Invalid date format. Expected YYYY-MM-DD');
+  }
+  
+  const [year, month, day] = parts;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+export function formatDate(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function getDateFilter(timePeriod?: string): { $or?: Array<{ date?: { $gte: Date }; createdAt?: { $gte: Date } }> } {
+  if (!timePeriod || timePeriod === 'all') {
+    return {};
+  }
+
+  const now = new Date();
+  let startDate: Date;
+
+  switch (timePeriod) {
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'year':
+      startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      break;
+    default:
+      return {};
+  }
+
+  return {
+    $or: [
+      { date: { $gte: startDate } },
+      { createdAt: { $gte: startDate } },
+    ],
+  };
+}
+
+

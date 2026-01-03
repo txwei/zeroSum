@@ -10,6 +10,8 @@ import transactionRoutes from './routes/transactions';
 import statsRoutes from './routes/stats';
 import groupRoutes from './routes/groups';
 import { initializeSocket } from './socket';
+import { errorHandler } from './middleware/errorHandler';
+import { logger } from './utils/logger';
 
 dotenv.config();
 
@@ -33,7 +35,7 @@ app.use((req, res, next) => {
   
   // Check if database is connected
   if (mongoose.connection.readyState !== 1) {
-    console.error('Database not connected. ReadyState:', mongoose.connection.readyState);
+    logger.error('Database not connected', { readyState: mongoose.connection.readyState });
     return res.status(503).json({ 
       error: 'Database connection not available',
       readyState: mongoose.connection.readyState 
@@ -62,6 +64,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
 // Start server after database connection
 const startServer = async () => {
   try {
@@ -70,16 +75,16 @@ const startServer = async () => {
     
     // Initialize Socket.io BEFORE starting the server
     initializeSocket(httpServer);
-    console.log('Socket.io initialized');
+    logger.info('Socket.io initialized');
     
     // Start server
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📊 MongoDB connection state: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
-      console.log(`🔌 Socket.io is ready to accept connections`);
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`MongoDB connection state: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
+      logger.info('Socket.io is ready to accept connections');
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', { error });
     process.exit(1);
   }
 };

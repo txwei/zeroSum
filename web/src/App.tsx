@@ -8,6 +8,7 @@ import GroupDetails from './pages/GroupDetails';
 import PublicGameEntry from './pages/PublicGameEntry';
 import Layout from './components/Layout';
 import { getBasePath } from './utils/env';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const AppRoutes = () => {
   const { loading } = useAuth();
@@ -40,13 +41,15 @@ function App() {
   const basePath = getBasePath();
   
   return (
-    <Router basename={basePath}>
-      <AuthProvider>
-        <GroupProvider>
-        <AppRoutes />
-        </GroupProvider>
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router basename={basePath}>
+        <AuthProvider>
+          <GroupProvider>
+            <AppRoutes />
+          </GroupProvider>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

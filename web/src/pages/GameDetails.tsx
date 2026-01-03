@@ -1,39 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/client';
-import { gameDetailsCache } from './Dashboard';
+import { gameDetailsCache } from '../utils/gameCache';
+import { Game } from '../types/api';
 
 interface GameDetailsProps {
   gameId: string;
   groupId?: string;
   onClose: () => void;
-}
-
-interface Game {
-  _id: string;
-  name: string;
-  date: string;
-  publicToken?: string;
-  settled?: boolean;
-  createdByUserId: {
-    _id: string;
-    username: string;
-    displayName: string;
-  };
-  groupId: {
-    _id: string;
-    name: string;
-  };
-  transactions: Array<{
-    _id?: string; // Optional because Dashboard Game doesn't have it
-    userId?: {
-      _id: string;
-      username: string;
-      displayName: string;
-    };
-    playerName?: string;
-    amount: number;
-  }>;
 }
 
 const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {

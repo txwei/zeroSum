@@ -4,6 +4,7 @@ import { Game } from '../models/Game';
 import { Group } from '../models/Group';
 import { User } from '../models/User';
 import { isGroupMember } from '../middleware/groupAuth';
+import { isSuperUser } from '../utils/superUser';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
@@ -782,17 +783,20 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const isMember = group.memberIds.some(
-      (memberId) => memberId.toString() === req.userId
-    );
-    if (!isMember) {
-      res.status(403).json({ error: 'Not a member of this group' });
-      return;
-    }
+    // Super user can delete any game, otherwise check permissions
+    if (!isSuperUser(req)) {
+      const isMember = group.memberIds.some(
+        (memberId) => memberId.toString() === req.userId
+      );
+      if (!isMember) {
+        res.status(403).json({ error: 'Not a member of this group' });
+        return;
+      }
 
-    if (game.createdByUserId.toString() !== req.userId) {
-      res.status(403).json({ error: 'Not authorized to delete this game' });
-      return;
+      if (game.createdByUserId.toString() !== req.userId) {
+        res.status(403).json({ error: 'Not authorized to delete this game' });
+        return;
+      }
     }
 
     await Game.findByIdAndDelete(req.params.id);

@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { Group } from '../models/Group';
 import { User } from '../models/User';
 import { isGroupMember } from '../middleware/groupAuth';
+import { isSuperUser } from '../utils/superUser';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 
@@ -95,8 +96,8 @@ router.patch('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Check if user is admin
-    if (group.createdByUserId.toString() !== req.userId) {
+    // Check if user is admin or super user
+    if (group.createdByUserId.toString() !== req.userId && !isSuperUser(req)) {
       res.status(403).json({ error: 'Only admin can update the group' });
       return;
     }
@@ -207,9 +208,9 @@ router.post('/:id/members', authenticate, async (req: AuthRequest, res: Response
       return;
     }
 
-    // Check if user is a member
+    // Check if user is a member (super user can add members to any group)
     const userId = req.userId?.toString() || '';
-    if (!isGroupMember(group, userId)) {
+    if (!isGroupMember(group, userId) && !isSuperUser(req)) {
       res.status(403).json({ error: 'Not a member of this group' });
       return;
     }
@@ -259,8 +260,8 @@ router.delete(
         return;
       }
 
-      // Check if user is admin
-      if (group.createdByUserId.toString() !== req.userId) {
+      // Check if user is admin or super user
+      if (group.createdByUserId.toString() !== req.userId && !isSuperUser(req)) {
         res.status(403).json({ error: 'Only admin can remove members' });
         return;
       }
@@ -274,8 +275,8 @@ router.delete(
         return;
       }
 
-      // Don't allow removing the admin
-      if (userId === group.createdByUserId.toString()) {
+      // Don't allow removing the admin (unless super user)
+      if (userId === group.createdByUserId.toString() && !isSuperUser(req)) {
         res.status(400).json({ error: 'Cannot remove the group admin' });
         return;
       }
@@ -309,8 +310,8 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
 
-    // Check if user is admin
-    if (group.createdByUserId.toString() !== req.userId) {
+    // Check if user is admin or super user
+    if (group.createdByUserId.toString() !== req.userId && !isSuperUser(req)) {
       res.status(403).json({ error: 'Only admin can delete the group' });
       return;
     }

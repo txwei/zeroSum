@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import apiClient from '../api/client';
 import { useAuth } from './AuthContext';
+import { getGroupId } from '../utils/groupHelpers';
 
 interface Group {
   _id: string;

@@ -16,7 +16,7 @@ interface TransactionTableProps {
   amountInputRefs: React.MutableRefObject<Map<number, HTMLInputElement>>;
   activeInputRef: React.MutableRefObject<HTMLInputElement | null>;
   onFieldChange: (rowId: number, field: 'playerName' | 'amount', value: string | number) => void;
-  onFieldBlur: (rowId: number, field: 'playerName' | 'amount', value: string | number) => void;
+  onFieldBlur: (rowId: number, field: 'playerName' | 'amount', value: string | number, immediate?: boolean) => void;
   onDeleteRow: (rowId: number) => void;
   onAddRow: () => void;
   onKeyboardValueChange: (value: string) => void;
@@ -80,7 +80,7 @@ export function TransactionTable({
                       type="text"
                       value={row.playerName}
                       onChange={(e) => onFieldChange(row.index, 'playerName', e.target.value)}
-                      onBlur={(e) => onFieldBlur(row.index, 'playerName', e.target.value, true)}
+                      onBlur={(e) => onFieldBlur(row.index, 'playerName', e.target.value)}
                       placeholder="Name"
                       autoCapitalize="off"
                       autoCorrect="off"
@@ -121,7 +121,7 @@ export function TransactionTable({
                           if (e.key === 'Enter') {
                             const result = onEvaluateExpression((e.target as HTMLInputElement).value);
                             if (result !== null) {
-                              onFieldBlur(row.index, 'amount', result.toString(), true);
+                              onFieldBlur(row.index, 'amount', result.toString());
                             }
                             e.preventDefault();
                           }
@@ -129,7 +129,7 @@ export function TransactionTable({
                         onBlur={(e) => {
                           setTimeout(() => {
                             const value = e.target.value;
-                            onFieldBlur(row.index, 'amount', value, true);
+                            onFieldBlur(row.index, 'amount', value);
                           }, 300);
                         }}
                         placeholder="0.00 or 10+5"

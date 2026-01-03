@@ -1,7 +1,7 @@
 /**
  * Custom hook for managing WebSocket connection for real-time game collaboration
  */
-import { useEffect, useRef, RefObject } from 'react';
+import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getApiUrl, isDev } from '../utils/env';
 import { Game } from '../types/api';

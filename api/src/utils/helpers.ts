@@ -1,9 +1,26 @@
 import crypto from 'crypto';
+import { Types } from 'mongoose';
 import { TOKEN_LENGTH } from './constants';
 
 /**
  * Helper utility functions
  */
+
+/**
+ * Extract ID string from ObjectId or populated object
+ */
+export function extractId(value: Types.ObjectId | { _id: Types.ObjectId } | string): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value instanceof Types.ObjectId) {
+    return value.toString();
+  }
+  if (value && typeof value === 'object' && '_id' in value) {
+    return value._id.toString();
+  }
+  return String(value);
+}
 
 export function generatePublicToken(): string {
   return crypto.randomBytes(TOKEN_LENGTH).toString('base64url');

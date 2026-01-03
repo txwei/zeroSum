@@ -7,7 +7,7 @@ import { TransactionService } from './TransactionService';
 import { UserService } from './UserService';
 import { NotFoundError, ForbiddenError, ValidationError, ConflictError } from '../types/errors';
 import { validateString, validateObjectId, validateNumber } from '../utils/validators';
-import { generatePublicToken, parseDate } from '../utils/helpers';
+import { generatePublicToken, parseDate, extractId } from '../utils/helpers';
 import { MAX_TOKEN_GENERATION_ATTEMPTS, BCRYPT_ROUNDS } from '../utils/constants';
 import { logger } from '../utils/logger';
 import { gameToDTO, GameDTO } from '../types/dto';
@@ -129,7 +129,8 @@ export class GameService {
     validateObjectId(gameId, 'Game ID');
 
     const game = await this.gameRepository.findById(gameId);
-    const group = await this.groupService.getRepository().findById(game.groupId.toString());
+    const groupId = extractId(game.groupId);
+    const group = await this.groupService.getRepository().findById(groupId);
 
     if (!this.groupService.isMember(group, userId)) {
       throw new ForbiddenError('Not a member of this group');
@@ -358,7 +359,8 @@ export class GameService {
     validateObjectId(gameId, 'Game ID');
 
     const game = await this.gameRepository.findById(gameId);
-    const group = await this.groupService.getRepository().findById(game.groupId.toString());
+    const groupId = extractId(game.groupId);
+    const group = await this.groupService.getRepository().findById(groupId);
 
     // Super user can delete any game, otherwise check permissions
     if (!isSuperUser(req || {} as AuthRequest)) {
@@ -381,7 +383,8 @@ export class GameService {
    */
   async getGameMembers(token: string): Promise<any[]> {
     const game = await this.gameRepository.findByPublicToken(token);
-    const group = await this.groupService.getRepository().findByIdPopulated(game.groupId.toString());
+    const groupId = extractId(game.groupId);
+    const group = await this.groupService.getRepository().findByIdPopulated(groupId);
     return group.memberIds as any[];
   }
 
@@ -397,7 +400,8 @@ export class GameService {
     }
 
     const game = await this.gameRepository.findByPublicToken(token);
-    const group = await this.groupService.getRepository().findById(game.groupId.toString());
+    const groupId = extractId(game.groupId);
+    const group = await this.groupService.getRepository().findById(groupId);
 
     const allUsers = await this.userService.getRepository().searchUsers(query, 10);
 
@@ -431,7 +435,8 @@ export class GameService {
    */
   async quickSignup(token: string, username: string, displayName: string, password?: string): Promise<any> {
     const game = await this.gameRepository.findByPublicToken(token);
-    const group = await this.groupService.getRepository().findById(game.groupId.toString());
+    const groupId = extractId(game.groupId);
+    const group = await this.groupService.getRepository().findById(groupId);
 
     // Hash password
     const passwordToHash = password || crypto.randomBytes(16).toString('hex');
@@ -447,8 +452,9 @@ export class GameService {
     // Add user to group if not already a member
     const userIdStr = user._id.toString();
     if (!this.groupService.isMember(group, userIdStr)) {
+      const gameGroupId = extractId(game.groupId);
       await this.groupService.getRepository().addMember(
-        game.groupId.toString(),
+        gameGroupId,
         user._id
       );
     }

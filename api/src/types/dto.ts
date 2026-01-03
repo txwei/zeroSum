@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { IGame, ITransaction } from '../models/Game';
 import { IGroup } from '../models/Group';
 import { IUser } from '../models/User';
+import { extractId } from '../utils/helpers';
 
 /**
  * Data Transfer Object types
@@ -53,8 +54,8 @@ export function gameToDTO(game: IGame): GameDTO {
     id: game._id.toString(),
     name: game.name,
     date: game.date,
-    createdByUserId: game.createdByUserId.toString(),
-    groupId: game.groupId.toString(),
+    createdByUserId: extractId(game.createdByUserId),
+    groupId: extractId(game.groupId),
     transactions: game.transactions.map(transactionToDTO),
     publicToken: game.publicToken,
     settled: game.settled,
@@ -77,8 +78,8 @@ export function groupToDTO(group: IGroup): GroupDTO {
     id: group._id.toString(),
     name: group.name,
     description: group.description,
-    createdByUserId: group.createdByUserId.toString(),
-    memberIds: group.memberIds.map(id => id.toString()),
+    createdByUserId: extractId(group.createdByUserId),
+    memberIds: group.memberIds.map(id => extractId(id)),
     isPublic: group.isPublic,
     createdAt: group.createdAt,
   };

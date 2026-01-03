@@ -4,7 +4,6 @@
  */
 import { Game } from '../types/api';
 import { formatDateForDisplay } from '../utils/date';
-import { getBasePath } from '../utils/env';
 
 interface GameHeaderProps {
   game: Game;

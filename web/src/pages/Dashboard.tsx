@@ -257,7 +257,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                           </span>
                         </div>
                         <div className="mt-2 flex items-center text-sm text-gray-500">
-                          <p>{formatDate(game.date)}</p>
+                          <p>{formatDate(game.date || '')}</p>
                           <span className="mx-2">•</span>
                           <p>
                             {game.transactions.length} participant

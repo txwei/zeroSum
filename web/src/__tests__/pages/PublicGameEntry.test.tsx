@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import PublicGameEntry from '../../pages/PublicGameEntry';
@@ -605,7 +605,7 @@ describe('PublicGameEntry Component', () => {
     });
 
     it('should prevent deleting the last row', async () => {
-      const user = userEvent.setup({ delay: null });
+      userEvent.setup({ delay: null });
       const singleRowGame = {
         ...mockGame,
         transactions: [{ _id: 't1', playerName: 'Alice', amount: 0 }],
@@ -667,7 +667,6 @@ describe('PublicGameEntry Component', () => {
       }, { timeout: 3000 });
 
       const deleteButtons = screen.getAllByLabelText('Delete row');
-      const initialCount = deleteButtons.length;
       
       await user.click(deleteButtons[deleteButtons.length - 1]);
 
@@ -1299,7 +1298,7 @@ describe('PublicGameEntry Component', () => {
     });
 
     it('should show error when trying to settle unbalanced game', async () => {
-      const user = userEvent.setup({ delay: null });
+      userEvent.setup({ delay: null });
       const unbalancedGame = {
         ...mockGame,
         transactions: [

@@ -2,7 +2,7 @@
  * Game Status Bar Component
  * Displays game balance status, currency selector, and settle/edit button
  */
-import { Currency, CURRENCY_SYMBOLS, CURRENCY_LOCALES } from '../utils/constants';
+import { Currency, CURRENCY_LOCALES } from '../utils/constants';
 
 interface GameStatusBarProps {
   isValid: boolean;

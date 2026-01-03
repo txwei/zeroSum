@@ -41,7 +41,7 @@ export interface GameFormActions {
  */
 export function useGameForm(
   token: string | undefined,
-  game: Game | null,
+  _game: Game | null,
   isSettled: boolean,
   onFieldUpdate?: (rowId: number, field: 'playerName' | 'amount', value: string | number) => void
 ): [GameFormState, GameFormActions] {
@@ -208,7 +208,7 @@ export function useGameForm(
 
     // Save to server immediately
     try {
-      const response = await publicGameService.addTransaction(token, '', 0);
+      await publicGameService.addTransaction(token, '', 0);
       setTimeout(() => {
         addingRowRef.current = false;
       }, TIMING.STATE_UPDATE_DELAY);

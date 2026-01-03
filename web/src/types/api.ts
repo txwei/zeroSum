@@ -46,19 +46,22 @@ export interface Transaction {
 }
 
 export interface Group {
-  _id: string;
+  id?: string; // From DTO
+  _id?: string; // Legacy support
   name: string;
   description?: string;
   createdByUserId: {
-    _id: string;
+    id?: string;
+    _id?: string; // Legacy support
     username: string;
     displayName: string;
   };
   memberIds: Array<{
-    _id: string;
+    id?: string;
+    _id?: string; // Legacy support
     username: string;
     displayName: string;
-  }>;
+  }> | string[]; // Can be array of IDs or populated objects
   isPublic: boolean;
   createdAt?: string;
 }

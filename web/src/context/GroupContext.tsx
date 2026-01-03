@@ -70,7 +70,7 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       // Don't auto-select groups - let routing handle it
       // But preserve stored selection if it exists and is valid
       if (selectedGroupId) {
-        const groupExists = fetchedGroups.find((g: Group) => g._id === selectedGroupId);
+        const groupExists = fetchedGroups.find((g: Group) => getGroupId(g) === selectedGroupId);
         if (!groupExists) {
           // Selected group no longer exists, clear it
           setSelectedGroupId(null);
@@ -153,16 +153,19 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
 
     // Prefetch all group details, games, and stats for each group (non-blocking)
     groupsToPrefetch.forEach(group => {
+      const groupId = getGroupId(group);
+      if (!groupId) return;
+      
       // Prefetch group details
-      prefetchGroupDetails(group._id);
+      prefetchGroupDetails(groupId);
 
       // Prefetch games (using dynamic import to avoid circular dependency)
       import('../pages/Dashboard').then(module => {
         const gameListCache = (module as any).gameListCache;
-        if (gameListCache && !gameListCache.has(group._id)) {
-          apiClient.get('/games', { params: { groupId: group._id } })
+        if (gameListCache && !gameListCache.has(groupId)) {
+          apiClient.get('/games', { params: { groupId } })
             .then(response => {
-              gameListCache.set(group._id, response.data);
+              gameListCache.set(groupId, response.data);
             })
             .catch(() => {
               // Silently fail for prefetch
@@ -175,10 +178,10 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       // Prefetch stats
       import('../pages/Stats').then(module => {
         const statsCache = (module as any).statsCache;
-        if (statsCache && !statsCache.has(group._id)) {
-          apiClient.get('/stats/totals', { params: { groupId: group._id } })
+        if (statsCache && !statsCache.has(groupId)) {
+          apiClient.get('/stats/totals', { params: { groupId } })
             .then(response => {
-              statsCache.set(group._id, response.data);
+              statsCache.set(groupId, response.data);
             })
             .catch(() => {
               // Silently fail for prefetch

@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import apiClient from '../api/client';
 import { getBasePath, getApiUrl, isDev } from '../utils/env';
 import MathKeyboard from '../components/MathKeyboard';
+import { getGroupId } from '../utils/groupHelpers';
 
 interface Game {
   _id: string;
@@ -826,16 +827,19 @@ const PublicGameEntry = () => {
         <div className="bg-white shadow rounded-lg overflow-hidden">
           {/* Game Header */}
           <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200">
-            {game?.groupId && (
-              <div className="mb-2 sm:mb-3">
-                <button
-                  onClick={() => navigate(`/groups/${game.groupId._id}`)}
-                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center"
-                >
-                  ← Back to {game.groupId.name}
-                </button>
-              </div>
-            )}
+            {game?.groupId && (() => {
+              const groupId = getGroupId(game.groupId);
+              return groupId ? (
+                <div className="mb-2 sm:mb-3">
+                  <button
+                    onClick={() => navigate(`/groups/${groupId}`)}
+                    className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                  >
+                    ← Back to {game.groupId.name}
+                  </button>
+                </div>
+              ) : null;
+            })()}
             {editingName && !isSettled ? (
               <div className="flex items-center space-x-2">
                 <input

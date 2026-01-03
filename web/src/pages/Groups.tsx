@@ -4,6 +4,7 @@ import apiClient from '../api/client';
 import { useGroup } from '../context/GroupContext';
 import { GroupCardSkeleton } from '../components/SkeletonLoader';
 import { useAuth } from '../context/AuthContext';
+import { getGroupId } from '../utils/groupHelpers';
 
 const Groups = () => {
   const { groups, loading, refreshGroups, prefetchGroupDetails } = useGroup();
@@ -41,7 +42,10 @@ const Groups = () => {
       setShowCreateForm(false);
       await refreshGroups();
       // Navigate to the new group's page
-      navigate(`/groups/${response.data._id}`);
+      const newGroupId = response.data.id || response.data._id;
+      if (newGroupId) {
+        navigate(`/groups/${newGroupId}`);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to create group');
     } finally {
@@ -172,9 +176,10 @@ const Groups = () => {
             </>
           ) : (
             groups.map((group) => {
+            const groupId = getGroupId(group);
             return (
               <div
-                key={group._id}
+                key={groupId}
                 className="bg-white shadow rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
@@ -208,10 +213,10 @@ const Groups = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => navigate(`/groups/${group._id}`)}
+                    onClick={() => navigate(`/groups/${groupId}`)}
                     onMouseEnter={() => {
                       // Only prefetch after a short delay to avoid unnecessary requests
-                      setTimeout(() => prefetchGroupDetails(group._id), 300);
+                      setTimeout(() => prefetchGroupDetails(groupId), 300);
                     }}
                     className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shrink-0 w-full sm:w-auto"
                   >

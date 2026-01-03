@@ -1,4 +1,5 @@
 import { useGroup } from '../context/GroupContext';
+import { getGroupId } from '../utils/groupHelpers';
 
 const GroupSelector = () => {
   const { groups, selectedGroupId, selectedGroup, selectGroup, loading } = useGroup();
@@ -19,11 +20,14 @@ const GroupSelector = () => {
         className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
       >
         <option value="">All Groups</option>
-        {groups.map((group) => (
-          <option key={group._id} value={group._id}>
-            {group.name}
-          </option>
-        ))}
+        {groups.map((group) => {
+          const groupId = getGroupId(group);
+          return (
+            <option key={groupId} value={groupId}>
+              {group.name}
+            </option>
+          );
+        })}
       </select>
       {selectedGroup && (
         <span className="text-xs text-gray-500">({selectedGroup.memberIds.length} members)</span>

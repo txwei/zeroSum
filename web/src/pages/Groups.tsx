@@ -156,7 +156,7 @@ const Groups = () => {
         </div>
       )}
 
-      {groups.length === 0 ? (
+      {groups.length === 0 && !loading ? (
         <div className="bg-white shadow rounded-lg p-6 text-center">
           <p className="text-gray-600 mb-4">No groups yet. Create your first group!</p>
           <button
@@ -166,7 +166,7 @@ const Groups = () => {
             Create Group
           </button>
         </div>
-      ) : (
+      ) : groups.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {loading ? (
             <>

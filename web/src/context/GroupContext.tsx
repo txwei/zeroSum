@@ -84,8 +84,11 @@ export const GroupProvider: React.FC<GroupProviderProps> = ({ children }) => {
       if (user && fetchedGroups.length > 0) {
         setTimeout(() => prefetchAllData(fetchedGroups), 500);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch groups:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      // Set empty array on error so UI shows "no groups" message
+      setGroups([]);
     } finally {
       setLoading(false);
     }

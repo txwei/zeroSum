@@ -235,7 +235,7 @@ const Stats = ({ groupId }: StatsProps) => {
 
   return (
     <div className="px-4 sm:px-0 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Statistics</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Statistics</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -245,17 +245,17 @@ const Stats = ({ groupId }: StatsProps) => {
 
       {/* Trend Chart Section */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">Trend Chart</h2>
           <p className="text-sm text-gray-500 mt-1">
             Select one or more players to view their running balance over time
           </p>
         </div>
 
-        <div className="px-6 py-4">
+        <div className="px-4 sm:px-6 py-4">
           {/* Player Selection */}
           <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
               <label className="block text-sm font-medium text-gray-700">
                 Select Players:
               </label>

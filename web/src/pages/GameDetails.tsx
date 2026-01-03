@@ -149,45 +149,45 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
       )}
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{game.name}</h1>
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{game.name}</h1>
               <p className="text-sm text-gray-500 mt-1">{formatDate(game.date)}</p>
-              <div className="flex items-center space-x-2 mt-1">
-              <p className="text-sm text-gray-500">
-                Created by {game.createdByUserId?.displayName || 'Unknown'}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <p className="text-sm text-gray-500 whitespace-nowrap">
+                  Created by <span className="font-medium">{game.createdByUserId?.displayName || 'Unknown'}</span>
+                </p>
                 {game.groupId && (
                   <>
-                    <span className="text-gray-400">•</span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                    <span className="text-gray-400 hidden sm:inline">•</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 break-words">
                       {game.groupId?.name || 'Unknown Group'}
                     </span>
                   </>
                 )}
               </div>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2 shrink-0">
               {hasPublicToken && game.publicToken && (
                 <button
                   onClick={() => {
                     // Use absolute path (/) so it's relative to the basename, not the current route
                     navigate(`/games/public/${game.publicToken}`);
                   }}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap"
                 >
                   Edit Game
                 </button>
               )}
               {!hasPublicToken && (
-                <span className="text-xs text-gray-500 px-4 py-2">
+                <span className="text-xs text-gray-500 px-4 py-2 text-center sm:text-left">
                   Public link not available
                 </span>
               )}
               <button
                 onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap"
               >
                 Delete Game
               </button>
@@ -195,7 +195,7 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
           </div>
         </div>
 
-        <div className="px-6 py-4">
+        <div className="px-4 sm:px-6 py-4">
           <div className="mb-4">
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -210,14 +210,14 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
           {game.transactions.length === 0 ? (
             <p className="text-gray-500">No transactions recorded for this game.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Participant
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Amount
                     </th>
                   </tr>
@@ -225,11 +225,11 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {game.transactions.map((transaction) => (
                     <tr key={transaction._id}>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-gray-900 break-words">
                         {transaction.playerName || transaction.userId?.displayName || 'Unknown Player'}
                       </td>
                       <td
-                        className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
+                        className={`px-3 sm:px-4 py-2.5 sm:py-3 whitespace-nowrap text-sm font-medium ${
                           transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}
                       >
@@ -240,9 +240,9 @@ const GameDetails = ({ gameId, onClose }: GameDetailsProps) => {
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">Total</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-sm font-medium text-gray-900">Total</td>
                     <td
-                      className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
+                      className={`px-3 sm:px-4 py-2.5 sm:py-3 whitespace-nowrap text-sm font-medium ${
                         isValid ? 'text-green-600' : 'text-red-600'
                       }`}
                     >

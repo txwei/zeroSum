@@ -213,107 +213,157 @@ const GroupDetails = () => {
     <div className="px-4 sm:px-0">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/groups')}
-              className="text-blue-600 hover:text-blue-500 text-sm"
-            >
-              ← Back to Groups
-            </button>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <div>
-              {editingName && isAdmin ? (
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    className="text-2xl font-bold border-b-2 border-blue-500 focus:outline-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleUpdateGroup();
-                      } else if (e.key === 'Escape') {
-                        setEditingName(false);
-                        setGroupName(group.name);
-                        setGroupDescription(group.description || '');
-                      }
-                    }}
-                    autoFocus
-                  />
+        {/* Back Button */}
+        <div className="mb-4">
+          <button
+            onClick={() => navigate('/groups')}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Groups
+          </button>
+        </div>
+
+        {/* Group Header Card */}
+        <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden mb-4">
+          <div className="px-4 sm:px-6 py-4 sm:py-5">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              {/* Left: Group Info */}
+              <div className="flex-1 min-w-0">
+                {editingName && isAdmin ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="text"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        className="text-xl sm:text-2xl font-bold border-b-2 border-blue-500 focus:outline-none bg-transparent flex-1 min-w-[200px]"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleUpdateGroup();
+                          } else if (e.key === 'Escape') {
+                            setEditingName(false);
+                            setGroupName(group.name);
+                            setGroupDescription(group.description || '');
+                          }
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleUpdateGroup}
+                        disabled={updating || !groupName.trim()}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {updating ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingName(false);
+                          setGroupName(group.name);
+                          setGroupDescription(group.description || '');
+                        }}
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-sm font-medium transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{group.name}</h1>
+                      {isAdmin && (
+                        <button
+                          onClick={() => setEditingName(true)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Edit group name"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Meta Info */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Owner: <span className="font-medium text-gray-900">{group.createdByUserId.displayName}</span></span>
+                      </div>
+                      
+                      {isAdmin && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                          Admin
+                        </span>
+                      )}
+                      
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                        group.isPublic 
+                          ? 'bg-green-50 text-green-700 border-green-200' 
+                          : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }`}>
+                        {group.isPublic ? (
+                          <>
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                            </svg>
+                            Public
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                            </svg>
+                            Private
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Manage Button */}
+              {user && (
+                <div className="flex-shrink-0">
                   <button
-                    onClick={handleUpdateGroup}
-                    disabled={updating || !groupName.trim()}
-                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
+                    onClick={() => setShowManage(!showManage)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      showManage
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
-                    {updating ? 'Saving...' : 'Save'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {showManage ? 'Hide' : 'Manage'}
                   </button>
-                  <button
-                    onClick={() => {
-                      setEditingName(false);
-                      setGroupName(group.name);
-                      setGroupDescription(group.description || '');
-                    }}
-                    className="text-gray-600 hover:text-gray-800 text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
-                  {isAdmin && (
-                    <button
-                      onClick={() => setEditingName(true)}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                      title="Edit group name"
-                    >
-                      ✏️
-                    </button>
-                  )}
                 </div>
               )}
-              <div className="flex items-center space-x-2 mt-1">
-                <p className="text-sm text-gray-500">
-                  Owner: <span className="font-medium">{group.createdByUserId.displayName}</span>
-                </p>
-                {isAdmin && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Admin
-                  </span>
-                )}
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  group.isPublic 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {group.isPublic ? 'Public' : 'Private'}
-                </span>
-              </div>
             </div>
           </div>
-          {user && (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowManage(!showManage)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium"
-            >
-              {showManage ? 'Hide' : 'Manage'}
-            </button>
-          </div>
-          )}
         </div>
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-6 sm:space-x-8">
             <button
               onClick={() => setActiveTab('games')}
               className={`${
                 activeTab === 'games'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              } whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
             >
               Games
             </button>
@@ -323,7 +373,7 @@ const GroupDetails = () => {
                 activeTab === 'stats'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              } whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
             >
               Statistics
             </button>

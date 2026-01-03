@@ -198,12 +198,12 @@ const Dashboard = ({ groupId }: DashboardProps) => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-xl font-semibold text-gray-900">Games</h2>
           <button
             onClick={() => setFilterMyGames(!filterMyGames)}
-            className={`px-3 py-1 rounded-md text-sm font-medium ${
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               filterMyGames
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -212,23 +212,27 @@ const Dashboard = ({ groupId }: DashboardProps) => {
             {filterMyGames ? 'Show All' : 'My Games Only'}
           </button>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Keyboard shortcuts hint */}
-          <div className="hidden md:flex items-center text-xs text-gray-500 space-x-2">
-            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">N</kbd>
+          <div className="hidden lg:flex items-center text-xs text-gray-500 space-x-2">
+            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs">N</kbd>
             <span>New game</span>
             <span className="mx-1">•</span>
-            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">M</kbd>
+            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs">M</kbd>
             <span>My games</span>
             <span className="mx-1">•</span>
-            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">ESC</kbd>
+            <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs">ESC</kbd>
             <span>Close</span>
           </div>
           <button
             onClick={handleCreateGameClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
           >
-            Create New Game
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="hidden sm:inline">Create New Game</span>
+            <span className="sm:hidden">New Game</span>
           </button>
         </div>
       </div>
@@ -265,14 +269,14 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                         onMouseEnter={() => prefetchGame(game._id)}
                         className="w-full text-left block hover:bg-gray-50 px-4 py-4 sm:px-6 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center">
-                          <p className="text-sm font-medium text-blue-600 truncate">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <p className="text-sm font-medium text-blue-600 break-words">
                             {game.name}
                           </p>
                           <span
-                            className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${
                               isSettled
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-100 text-gray-800'
@@ -342,7 +346,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                           </div>
                         )}
                       </div>
-                      <div className="ml-5 flex-shrink-0">
+                      <div className="flex-shrink-0">
                         <svg
                           className="h-5 w-5 text-gray-400"
                           fill="none"
@@ -370,14 +374,17 @@ const Dashboard = ({ groupId }: DashboardProps) => {
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Create New Game</h2>
                 <button
                   onClick={() => setShowCreateForm(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  aria-label="Close"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
               <CreateGame groupId={groupId} onClose={handleGameCreated} />
@@ -390,7 +397,7 @@ const Dashboard = ({ groupId }: DashboardProps) => {
       {selectedGameId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Game Details</h2>
                 <button
@@ -398,9 +405,12 @@ const Dashboard = ({ groupId }: DashboardProps) => {
                     setSelectedGameId(null);
                     fetchGames();
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  aria-label="Close"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
               <GameDetails

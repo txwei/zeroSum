@@ -71,6 +71,8 @@ const PublicGameEntry = () => {
   const rowsRef = useRef<TransactionRow[]>([]); // Keep ref for beforeunload
   const addingRowRef = useRef<boolean>(false); // Track if we're currently adding a row
   const deletingRowRef = useRef<boolean>(false); // Track if we're currently deleting a row
+  const expectedRowCountRef = useRef<number | null>(null); // Track expected row count after deletion
+  const focusingInputRef = useRef<boolean>(false); // Track if we're intentionally focusing an input
 
   // Helper function to format date to YYYY-MM-DD
   // The date is stored as UTC midnight, so we need to extract the UTC date components
@@ -216,6 +218,16 @@ const PublicGameEntry = () => {
         return;
       }
       
+      // If we have an expected row count (from a deletion), only accept updates that match
+      if (expectedRowCountRef.current !== null) {
+        if (updatedGame.transactions.length !== expectedRowCountRef.current) {
+          // Server update doesn't match our expected count, ignore it
+          return;
+        }
+        // Matches expected count, clear the expectation
+        expectedRowCountRef.current = null;
+      }
+      
       setGame(updatedGame);
       
       // Only update gameName if not currently editing
@@ -298,6 +310,19 @@ const PublicGameEntry = () => {
         if (addingRowRef.current && currentRows.length > game.transactions.length) {
           // Don't update rows yet - wait for the server response
           return currentRows;
+        }
+        
+        // If we're deleting a row, check if the server update matches our expected count
+        if (deletingRowRef.current || expectedRowCountRef.current !== null) {
+          const expectedCount = expectedRowCountRef.current ?? currentRows.length;
+          if (game.transactions.length !== expectedCount) {
+            // Server update doesn't match our expected count, ignore it
+            return currentRows;
+          }
+          // Matches expected count, clear the expectation
+          if (expectedRowCountRef.current !== null) {
+            expectedRowCountRef.current = null;
+          }
         }
         
         const newRows: TransactionRow[] = game.transactions.map((t, idx) => {
@@ -656,6 +681,8 @@ const PublicGameEntry = () => {
     
     // Store current state for potential revert
     const previousRows = [...rows];
+    const expectedCount = rows.length - 1; // Expected count after deletion
+    expectedRowCountRef.current = expectedCount;
 
     // Optimistic update
     setRows((currentRows) => {
@@ -681,13 +708,19 @@ const PublicGameEntry = () => {
       // Wait a bit before allowing game-updated to process
       setTimeout(() => {
         deletingRowRef.current = false;
-        if (response.data) {
+        // Clear expected count only after we've confirmed the server response
+        if (response.data && response.data.transactions.length === expectedCount) {
+          expectedRowCountRef.current = null;
           setGame(response.data);
+        } else {
+          // Server response doesn't match, keep expecting the count
+          // It will be cleared when we receive a matching game-updated event
         }
       }, 100);
     } catch (err) {
       console.error('Failed to delete row:', err);
       deletingRowRef.current = false;
+      expectedRowCountRef.current = null;
       // Revert on error
       setRows(previousRows);
       rowsRef.current = previousRows;
@@ -792,12 +825,12 @@ const PublicGameEntry = () => {
         )}
         <div className="bg-white shadow rounded-lg overflow-hidden">
           {/* Game Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200">
             {game?.groupId && (
-              <div className="mb-3">
+              <div className="mb-2 sm:mb-3">
                 <button
                   onClick={() => navigate(`/groups/${game.groupId._id}`)}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 flex items-center"
                 >
                   ← Back to {game.groupId.name}
                 </button>
@@ -820,7 +853,7 @@ const PublicGameEntry = () => {
                     updateGameName(e.target.value, true);
                     setEditingName(false);
                   }}
-                  className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm sm:text-base"
                   placeholder="Game title"
                   autoFocus
                 />
@@ -829,16 +862,16 @@ const PublicGameEntry = () => {
                     updateGameName(gameName, true);
                     setEditingName(false);
                   }}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   Done
                 </button>
               </div>
             ) : (
               <div>
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-2">
                   <h1 
-                    className={`text-2xl font-bold text-gray-900 ${!isSettled ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                    className={`text-xl sm:text-2xl font-bold text-gray-900 break-words ${!isSettled ? 'cursor-pointer hover:text-blue-600' : ''}`}
                     onClick={() => !isSettled && setEditingName(true)}
                     title={!isSettled ? "Click to edit" : ""}
                   >
@@ -852,9 +885,13 @@ const PublicGameEntry = () => {
                         setTimeout(() => setShowCopiedMessage(false), 2000);
                       });
                     }}
-                    className="px-3 py-1 text-sm text-blue-600 hover:text-blue-700 border border-blue-300 rounded-md hover:bg-blue-50"
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs sm:text-sm text-blue-600 hover:text-blue-700 border border-blue-300 rounded-md hover:bg-blue-50 whitespace-nowrap self-start sm:self-auto"
                   >
-                    Copy Game URL
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span className="hidden sm:inline">Copy Game URL</span>
+                    <span className="sm:hidden">Copy URL</span>
                   </button>
                 </div>
                 {editingDate && !isSettled ? (
@@ -867,19 +904,19 @@ const PublicGameEntry = () => {
                         updateGameDate(e.target.value, true);
                         setEditingDate(false);
                       }}
-                      className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                       autoFocus
                     />
                     <button
                       onClick={() => setEditingDate(false)}
-                      className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                      className="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                     >
                       Done
                     </button>
                   </div>
                 ) : (
                   <div 
-                    className={`text-sm text-gray-500 ${!isSettled ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                    className={`text-xs sm:text-sm text-gray-500 ${!isSettled ? 'cursor-pointer hover:text-blue-600' : ''}`}
                     onClick={() => !isSettled && setEditingDate(true)}
                     title={!isSettled ? "Click to edit" : ""}
                   >
@@ -895,40 +932,40 @@ const PublicGameEntry = () => {
             )}
           </div>
 
-          <div className="px-6 py-4">
+          <div className="px-4 py-4 sm:px-6 sm:py-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2.5 sm:py-3 rounded mb-4 text-sm">
                 {error}
               </div>
             )}
 
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               {/* Mobile: Stack vertically */}
-              <div className="sm:hidden space-y-3">
+              <div className="sm:hidden space-y-2.5">
                 {/* Status badge */}
                 <div className="flex items-center justify-center">
                   <span
-                    className={`inline-flex items-center px-4 py-2 rounded-lg text-base font-semibold whitespace-nowrap shadow-sm ${
+                    className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap shadow-sm ${
                       isValid ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                     }`}
                   >
                     {isValid 
                       ? '✓ Balanced' 
-                      : `Unbalanced (sum: ${formatCurrency(sum)})`}
+                      : `Unbalanced: ${formatCurrency(sum)}`}
                   </span>
                 </div>
                 
                 {/* Currency and Settled badge row */}
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-2">
                   {isSettled && (
-                    <span className="inline-flex items-center px-4 py-2 rounded-lg text-base font-semibold bg-blue-500 text-white whitespace-nowrap shadow-sm">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-500 text-white whitespace-nowrap shadow-sm">
                       ✓ Settled
                     </span>
                   )}
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value as Currency)}
-                    className="px-4 py-2 rounded-lg border-2 border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-base font-medium"
+                    className="px-3 py-1.5 rounded-lg border-2 border-gray-300 bg-white shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-medium"
                   >
                     <option value="USD">USD ($)</option>
                     <option value="CNY">CNY (¥)</option>
@@ -941,14 +978,14 @@ const PublicGameEntry = () => {
                     <button
                       onClick={handleSettle}
                       disabled={!isValid}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg text-base font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-lg transform transition-all active:scale-95"
+                      className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-md transform transition-all active:scale-95"
                     >
                       Settle Game
                     </button>
                   ) : (
                     <button
                       onClick={handleEdit}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg text-base font-semibold hover:bg-blue-700 whitespace-nowrap shadow-lg transform transition-all active:scale-95"
+                      className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 whitespace-nowrap shadow-md transform transition-all active:scale-95"
                     >
                       Edit Game
                     </button>
@@ -1004,27 +1041,25 @@ const PublicGameEntry = () => {
             </div>
 
             {/* Players Table */}
-            <div className="overflow-x-auto mb-4">
+            <div className="overflow-x-auto mb-4 -mx-4 sm:mx-0">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Player
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                      Actions
-                    </th>
+                    <th className="px-2 py-2 sm:py-3 w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {rows.map((row) => (
                     <tr key={row.index}>
-                      <td className="px-4 py-3">
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3">
                         {isSettled ? (
-                          <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-700">
+                          <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50 rounded-md text-sm text-gray-700">
                             {row.playerName || '—'}
                           </div>
                         ) : (
@@ -1033,22 +1068,22 @@ const PublicGameEntry = () => {
                             value={row.playerName}
                             onChange={(e) => updateField(row.index, 'playerName', e.target.value)}
                             onBlur={(e) => updateField(row.index, 'playerName', e.target.value, true)}
-                            placeholder="Enter player name..."
+                            placeholder="Name"
                             autoCapitalize="off"
                             autoCorrect="off"
                             spellCheck="false"
-                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 sm:px-4 py-2.5 sm:py-3">
                         {isSettled ? (
-                          <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-700">
+                          <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50 rounded-md text-sm text-gray-700">
                             {row.amount ? formatCurrency(parseFloat(row.amount) || 0) : '—'}
                           </div>
                         ) : (
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            <span className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
                               {getCurrencySymbol()}
                             </span>
                             <input
@@ -1063,12 +1098,23 @@ const PublicGameEntry = () => {
                               value={row.amount}
                               onChange={(e) => updateField(row.index, 'amount', e.target.value)}
                               inputMode={isMobile ? "none" : "text"}
+                              onMouseDown={() => {
+                                // Prevent blur when clicking on the input (especially on mobile)
+                                if (isMobile) {
+                                  focusingInputRef.current = true;
+                                  // Small delay to ensure focus happens
+                                  setTimeout(() => {
+                                    focusingInputRef.current = false;
+                                  }, 100);
+                                }
+                              }}
                               onFocus={(e) => {
                                 // Only show keyboard on mobile
                                 if (isMobile) {
                                   activeInputRef.current = e.target;
                                   setActiveInputRowIndex(row.index);
                                   setShowKeyboard(true);
+                                  focusingInputRef.current = false; // Clear flag after focus
                                 }
                               }}
                               onKeyDown={(e) => {
@@ -1085,6 +1131,18 @@ const PublicGameEntry = () => {
                               onBlur={(e) => {
                                 // Delay to allow keyboard button clicks
                                 setTimeout(() => {
+                                  // If we're intentionally focusing this input, don't close keyboard
+                                  if (focusingInputRef.current) {
+                                    return;
+                                  }
+                                  
+                                  // Check if the input is still focused (user might have clicked back)
+                                  const activeElement = document.activeElement;
+                                  if (activeElement === e.target) {
+                                    // Input is still focused, keep keyboard open
+                                    return;
+                                  }
+                                  
                                   // If keyboard is being closed intentionally, don't refocus
                                   if (keyboardClosingRef.current) {
                                     keyboardClosingRef.current = false;
@@ -1096,7 +1154,6 @@ const PublicGameEntry = () => {
                                   }
                                   
                                   // Check if focus moved to keyboard
-                                  const activeElement = document.activeElement;
                                   if (activeElement && activeElement.closest('.math-keyboard')) {
                                     return;
                                   }
@@ -1134,21 +1191,24 @@ const PublicGameEntry = () => {
                                   updateField(row.index, 'amount', value, true);
                                 }, 300);
                               }}
-                              placeholder="0.00 or (102 - 58)"
-                              className="w-full pl-8 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              placeholder="0.00 or 10+5"
+                              className="w-full pl-7 sm:pl-8 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
                             />
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2.5 sm:py-3">
                         {!isSettled && (
                           <button
                             onClick={() => deleteRow(row.index)}
                             disabled={rows.length <= 1}
-                            className="text-red-600 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed"
-                            title="Remove row"
+                            className="p-1.5 sm:p-1.5 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-colors"
+                            title="Delete row"
+                            aria-label="Delete row"
                           >
-                            ✕
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                           </button>
                         )}
                       </td>
@@ -1157,15 +1217,15 @@ const PublicGameEntry = () => {
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">Total</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-sm font-medium text-gray-900">Total</td>
                     <td
-                      className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
+                      className={`px-3 sm:px-4 py-2.5 sm:py-3 whitespace-nowrap text-sm font-medium ${
                         isValid ? 'text-green-600' : 'text-red-600'
                       }`}
                     >
                       {formatCurrency(sum)}
                     </td>
-                    <td className="px-4 py-3"></td>
+                    <td className="px-2 py-2.5 sm:py-3"></td>
                   </tr>
                 </tfoot>
               </table>
@@ -1174,9 +1234,11 @@ const PublicGameEntry = () => {
               <div className="mt-4 sm:hidden">
                 <button
                   onClick={addRow}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-md text-base font-medium hover:bg-blue-700 flex items-center justify-center space-x-2"
+                  className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 flex items-center justify-center space-x-2 active:bg-blue-800"
                 >
-                  <span className="text-xl">+</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
                   <span>Add Row</span>
                 </button>
               </div>

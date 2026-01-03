@@ -65,13 +65,27 @@ const Groups = () => {
 
   return (
     <div className="px-4 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Groups</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Groups</h1>
         <button
           onClick={handleCreateGroupClick}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors self-start sm:self-auto"
         >
-          {showCreateForm ? 'Cancel' : 'Create Group'}
+          {showCreateForm ? (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Cancel
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Group
+            </>
+          )}
         </button>
       </div>
 
@@ -161,13 +175,13 @@ const Groups = () => {
             return (
               <div
                 key={group._id}
-                className="bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow"
+                className="bg-white shadow rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">{group.name}</h3>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
                         group.isPublic 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
@@ -176,11 +190,21 @@ const Groups = () => {
                       </span>
                     </div>
                     {group.description && (
-                      <p className="text-sm text-gray-600 mb-3">{group.description}</p>
+                      <p className="text-sm text-gray-600 mb-3 break-words">{group.description}</p>
                     )}
-                    <div className="text-sm text-gray-500">
-                      <p>{group.memberIds.length} member{group.memberIds.length !== 1 ? 's' : ''}</p>
-                      <p>Created {formatDate(group.createdAt)}</p>
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        {group.memberIds.length} member{group.memberIds.length !== 1 ? 's' : ''}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 7h14a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                        </svg>
+                        {formatDate(group.createdAt)}
+                      </span>
                     </div>
                   </div>
                   <button
@@ -189,9 +213,12 @@ const Groups = () => {
                       // Only prefetch after a short delay to avoid unnecessary requests
                       setTimeout(() => prefetchGroupDetails(group._id), 300);
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium ml-4 transition-colors"
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors shrink-0 w-full sm:w-auto"
                   >
-                    Open
+                    <span>Open</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 </div>
               </div>

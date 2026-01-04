@@ -6,6 +6,7 @@ import GameDetails from './GameDetails';
 import { GameCardSkeleton, SkeletonLoader } from '../components/SkeletonLoader';
 import { Game } from '../types/api';
 import { gameDetailsCache, gameListCache } from '../utils/gameCache';
+import { getGameId } from '../utils/gameHelpers';
 
 interface DashboardProps {
   groupId: string;
@@ -232,12 +233,13 @@ const Dashboard = ({ groupId }: DashboardProps) => {
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <ul className="divide-y divide-gray-200">
             {filteredGames.map((game) => {
+              const gameId = getGameId(game);
               const isSettled = game.settled || false;
               return (
-                <li key={game._id}>
+                <li key={gameId}>
                       <button
-                        onClick={() => setSelectedGameId(game._id)}
-                        onMouseEnter={() => prefetchGame(game._id)}
+                        onClick={() => setSelectedGameId(gameId)}
+                        onMouseEnter={() => prefetchGame(gameId)}
                         className="w-full text-left block hover:bg-gray-50 px-4 py-4 sm:px-6 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-4">

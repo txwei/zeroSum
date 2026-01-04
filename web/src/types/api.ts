@@ -15,17 +15,20 @@ export interface AuthResponse {
 }
 
 export interface Game {
-  _id: string;
+  id?: string; // From DTO
+  _id?: string; // Legacy support
   name: string;
   date?: string;
   settled?: boolean;
   createdByUserId: {
-    _id: string;
+    id?: string;
+    _id?: string; // Legacy support
     username: string;
     displayName: string;
   };
   groupId: {
-    _id: string;
+    id?: string;
+    _id?: string; // Legacy support
     name: string;
   };
   transactions: Transaction[];

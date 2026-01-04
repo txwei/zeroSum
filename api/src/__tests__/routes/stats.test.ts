@@ -5,10 +5,12 @@ import { authenticate } from '../../middleware/auth';
 import { createTestUser, createTestGroup } from '../helpers/testHelpers';
 import { createAuthHeader } from '../helpers/authHelpers';
 import mongoose from 'mongoose';
+import { errorHandler } from '../../middleware/errorHandler';
 
 const app = express();
 app.use(express.json());
 app.use('/api/stats', authenticate, statsRoutes);
+app.use(errorHandler);
 
 describe('Stats Routes', () => {
   let user1: { _id: mongoose.Types.ObjectId };

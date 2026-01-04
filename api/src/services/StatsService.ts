@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { GameRepository } from '../repositories/GameRepository';
 import { GroupService } from './GroupService';
-import { NotFoundError, ValidationError } from '../types/errors';
+import { NotFoundError, ValidationError, ForbiddenError } from '../types/errors';
 import { validateObjectId, validateArray } from '../utils/validators';
 import { getDateFilter } from '../utils/helpers';
 import { getOptionalUserId } from '../utils/auth';
@@ -60,7 +60,7 @@ export class StatsService {
           throw new ValidationError('Authentication required for private groups');
         }
         if (!this.groupService.isMember(group, userId)) {
-          throw new ValidationError('Not a member of this group');
+          throw new ForbiddenError('Not a member of this group');
         }
       }
 
@@ -93,7 +93,7 @@ export class StatsService {
       validateObjectId(groupId, 'Group ID');
       const group = await this.groupService.getRepository().findById(groupId);
       if (!this.groupService.isMember(group, userId)) {
-        throw new ValidationError('Not a member of this group');
+        throw new ForbiddenError('Not a member of this group');
       }
     }
 

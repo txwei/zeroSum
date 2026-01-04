@@ -65,7 +65,11 @@ describe('GameRepository', () => {
       const games = await gameRepository.findByGroupId(testGroup._id.toString());
 
       expect(games.length).toBeGreaterThanOrEqual(2);
-      expect(games.every(g => g.groupId.toString() === testGroup._id.toString())).toBe(true);
+      // groupId is populated, so we need to access _id
+      expect(games.every(g => {
+        const groupId = (g.groupId as any)._id || g.groupId;
+        return groupId.toString() === testGroup._id.toString();
+      })).toBe(true);
     });
   });
 

@@ -35,6 +35,12 @@ export function parseDate(dateString?: string): Date | undefined {
     return undefined;
   }
   
+  // Validate YYYY-MM-DD format strictly
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!datePattern.test(dateString)) {
+    throw new Error('Invalid date format. Expected YYYY-MM-DD');
+  }
+  
   // Parse YYYY-MM-DD format and create date at UTC midnight
   // This prevents timezone issues where the date might shift by a day
   const parts = dateString.split('-').map(Number);

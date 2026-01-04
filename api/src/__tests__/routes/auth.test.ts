@@ -3,10 +3,12 @@ import express from 'express';
 import authRoutes from '../../routes/auth';
 import { User } from '../../models/User';
 import { createTestUser } from '../helpers/testHelpers';
+import { errorHandler } from '../../middleware/errorHandler';
 
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRoutes);
+app.use(errorHandler);
 
 describe('Auth Routes', () => {
   describe('POST /api/auth/register', () => {
@@ -39,7 +41,7 @@ describe('Auth Routes', () => {
           password: 'password123',
         });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       expect(response.body.error).toBe('Username already exists');
     });
 
@@ -53,7 +55,7 @@ describe('Auth Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('All fields are required');
+      expect(response.body.error).toBe('Display name is required');
     });
 
     it('should fail when password is too short', async () => {

@@ -5,10 +5,12 @@ import { authenticate } from '../../middleware/auth';
 import { createTestUser, createTestGroup } from '../helpers/testHelpers';
 import { createAuthHeader } from '../helpers/authHelpers';
 import mongoose from 'mongoose';
+import { errorHandler } from '../../middleware/errorHandler';
 
 const app = express();
 app.use(express.json());
 app.use('/api/groups', authenticate, groupRoutes);
+app.use(errorHandler);
 
 describe('Group Routes', () => {
   let user1: { _id: mongoose.Types.ObjectId };
@@ -36,7 +38,7 @@ describe('Group Routes', () => {
       expect(response.status).toBe(201);
       expect(response.body.name).toBe('New Group');
       expect(response.body.description).toBe('Test description');
-      expect(response.body.createdByUserId.id || response.body.createdByUserId._id).toBeDefined();
+      expect(response.body.createdByUserId).toBe(user1._id.toString());
       expect(response.body.memberIds.length).toBeGreaterThan(0);
     });
 
@@ -49,7 +51,7 @@ describe('Group Routes', () => {
         });
 
       expect(response.status).toBe(201);
-      const memberIds = response.body.memberIds.map((m: any) => m.id || m._id);
+      const memberIds = response.body.memberIds; // memberIds are already strings in DTO
       expect(memberIds).toContain(user1._id.toString());
     });
 
@@ -62,7 +64,7 @@ describe('Group Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Group name is required');
+      expect(response.body.error).toBe('Group name must be a string');
     });
 
     it('should fail when not authenticated', async () => {
@@ -173,7 +175,7 @@ describe('Group Routes', () => {
         });
 
       expect(response.status).toBe(200);
-      const memberIds = response.body.memberIds.map((m: any) => m.id || m._id);
+      const memberIds = response.body.memberIds; // memberIds are already strings in DTO
       expect(memberIds).toContain(user3._id.toString());
     });
 

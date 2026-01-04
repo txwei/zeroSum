@@ -51,7 +51,11 @@ describe('GroupRepository', () => {
       const groups = await groupRepository.findUserGroups(testUser._id.toString());
 
       expect(groups.length).toBeGreaterThan(0);
-      expect(groups.some(g => g.memberIds.some(id => id.toString() === testUser._id.toString()))).toBe(true);
+      // memberIds are populated, so we need to access _id
+      expect(groups.some(g => g.memberIds.some(id => {
+        const memberId = (id as any)._id || id;
+        return memberId.toString() === testUser._id.toString();
+      }))).toBe(true);
     });
   });
 
@@ -84,7 +88,11 @@ describe('GroupRepository', () => {
         newMember._id
       );
 
-      expect(updated.memberIds.some(id => id.toString() === newMember._id.toString())).toBe(true);
+      // memberIds are populated, so we need to access _id
+      expect(updated.memberIds.some(id => {
+        const memberId = (id as any)._id || id;
+        return memberId.toString() === newMember._id.toString();
+      })).toBe(true);
     });
   });
 

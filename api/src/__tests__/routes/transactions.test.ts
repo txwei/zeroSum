@@ -5,10 +5,12 @@ import { authenticate } from '../../middleware/auth';
 import { createTestUser, createTestGroup, createTestGame } from '../helpers/testHelpers';
 import { createAuthHeader } from '../helpers/authHelpers';
 import mongoose from 'mongoose';
+import { errorHandler } from '../../middleware/errorHandler';
 
 const app = express();
 app.use(express.json());
 app.use('/api', authenticate, transactionRoutes);
+app.use(errorHandler);
 
 describe('Transaction Routes', () => {
   let user1: { _id: mongoose.Types.ObjectId };
@@ -58,7 +60,7 @@ describe('Transaction Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Transactions must sum to zero');
+      expect(response.body.error).toContain('Transactions must sum to zero');
     });
 
     it('should return 403 when non-member tries to add transaction', async () => {

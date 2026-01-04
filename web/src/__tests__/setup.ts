@@ -71,7 +71,8 @@ afterAll(() => {
 // Ensure all async operations complete before tests finish
 afterEach(async () => {
   // Wait for any pending promises to resolve
-  await new Promise(resolve => setTimeout(resolve, 0));
+  // Use queueMicrotask to avoid fake timer issues
+  await new Promise(resolve => queueMicrotask(resolve));
 });
 
 // Mock API URL for tests

@@ -5,10 +5,12 @@ import { authenticate } from '../../middleware/auth';
 import { createTestUser, createTestGroup } from '../helpers/testHelpers';
 import { createAuthHeader } from '../helpers/authHelpers';
 import mongoose from 'mongoose';
+import { errorHandler } from '../../middleware/errorHandler';
 
 const app = express();
 app.use(express.json());
 app.use('/api/games', authenticate, gameRoutes);
+app.use(errorHandler);
 
 describe('Game Routes', () => {
   let user1: { _id: mongoose.Types.ObjectId };
@@ -35,7 +37,7 @@ describe('Game Routes', () => {
         .set('Authorization', user1Token)
         .send({
           name: 'Test Game',
-          date: new Date().toISOString(),
+          date: '2024-01-15',
           groupId: group._id.toString(),
           transactions: [
             { userId: user1._id.toString(), playerName: '_', amount: 100 },
@@ -54,7 +56,7 @@ describe('Game Routes', () => {
         .set('Authorization', user1Token)
         .send({
           name: 'Test Game',
-          date: new Date().toISOString(),
+          date: '2024-01-15',
           groupId: group._id.toString(),
           transactions: [
             { userId: user1._id.toString(), playerName: '_', amount: 100 },
@@ -63,7 +65,7 @@ describe('Game Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Transactions must sum to zero');
+      expect(response.body.error).toContain('Transactions must sum to zero');
     });
 
     it('should fail when groupId is missing', async () => {
@@ -72,11 +74,11 @@ describe('Game Routes', () => {
         .set('Authorization', user1Token)
         .send({
           name: 'Test Game',
-          date: new Date().toISOString(),
+          date: '2024-01-15',
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Group ID is required');
+      expect(response.body.error).toBe('Invalid Group ID');
     });
 
     it('should fail when non-member tries to create game', async () => {

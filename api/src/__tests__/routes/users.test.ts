@@ -4,10 +4,12 @@ import userRoutes from '../../routes/users';
 import { authenticate } from '../../middleware/auth';
 import { createTestUser } from '../helpers/testHelpers';
 import { createAuthHeader } from '../helpers/authHelpers';
+import { errorHandler } from '../../middleware/errorHandler';
 
 const app = express();
 app.use(express.json());
 app.use('/api/users', authenticate, userRoutes);
+app.use(errorHandler);
 
 describe('User Routes', () => {
   describe('GET /api/users/me', () => {

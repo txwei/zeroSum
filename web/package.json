@@ -15,7 +15,7 @@
     "test:coverage": "jest --coverage",
     "test:quick": "jest",
     "test:all": "npm run type-check && npm run test:quick && npm run build",
-    "ci": "npm run type-check && npm run build && npm run test:quick || true",
+    "ci": "npm run type-check && npm run build && (npm run test:quick || echo 'Tests failed but continuing...')",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },

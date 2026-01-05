@@ -53,7 +53,9 @@ describe('ErrorBoundary', () => {
   });
 
   it('should have reload button', () => {
-    const reloadSpy = jest.spyOn(window.location, 'reload').mockImplementation(() => {});
+    // Mock window.location.reload properly
+    delete (window as any).location;
+    window.location = { reload: jest.fn() } as any;
 
     render(
       <ErrorBoundary>
@@ -65,9 +67,7 @@ describe('ErrorBoundary', () => {
     expect(reloadButton).toBeInTheDocument();
 
     reloadButton.click();
-    expect(reloadSpy).toHaveBeenCalled();
-
-    reloadSpy.mockRestore();
+    expect(window.location.reload).toHaveBeenCalled();
   });
 });
 

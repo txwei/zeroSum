@@ -72,7 +72,7 @@ afterAll(() => {
 afterEach(async () => {
   // Wait for any pending promises to resolve
   // Use queueMicrotask to avoid fake timer issues
-  await new Promise(resolve => queueMicrotask(resolve));
+  await new Promise<void>(resolve => queueMicrotask(() => resolve()));
 });
 
 // Mock API URL for tests

@@ -45,7 +45,7 @@ describe('StatsService', () => {
       const testUser = await createTestUser('creator', 'Creator');
       const testGroup = await createTestGroup(testUser._id);
       await createTestGame(testUser._id, testGroup._id, 'Game 1', new Date(), [
-        { userId: testUser._id, amount: 50 },
+        { userId: testUser._id, playerName: 'Creator', amount: 50 },
         { playerName: 'Bob', amount: -50 },
       ]);
 

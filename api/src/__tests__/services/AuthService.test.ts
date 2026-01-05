@@ -84,8 +84,9 @@ describe('AuthService', () => {
   });
 
   describe('verifyToken', () => {
-    it('should verify valid token', () => {
-      const result = authService.login('testuser', 'password123');
+    it('should verify valid token', async () => {
+      await createTestUser('testuser', 'Test User', 'password123');
+      const result = await authService.login('testuser', 'password123');
       // This would need to be implemented with actual token generation
       // For now, we'll test the structure
       expect(result).toBeDefined();
